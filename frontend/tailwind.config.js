@@ -1,12 +1,16 @@
+// tailwind.config.js
+import colors from 'tailwindcss/colors'
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
     "./index.html",
-    "./src//*.{js,ts,jsx,tsx}",
+    "./src/**/*.{js,ts,jsx,tsx}", // fixed your path (had // before)
   ],
   theme: {
     extend: {
       colors: {
+        gray: colors.gray, // bring back full gray palette for bg-gray-50 etc.
         primary: {
           50: '#f0f9ff',
           500: '#3b82f6',
@@ -27,16 +31,16 @@ export default {
           50: '#fef2f2',
           500: '#ef4444',
           600: '#dc2626',
-        }
+        },
       },
       fontFamily: {
-        'sans': ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
       },
       spacing: {
-        '18': '4.5rem',
-        '88': '22rem',
-      }
+        18: '4.5rem',
+        88: '22rem',
+      },
     },
   },
-  plugins: [],
+  plugins: [],
 }

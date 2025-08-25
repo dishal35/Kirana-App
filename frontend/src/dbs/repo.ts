@@ -1,5 +1,5 @@
 import { db } from './db';
-import { Product, Transaction, Shop } from '../types';
+import type{ Product, Transaction, Shop } from '../types';
 
 export class ProductRepository {
   async create(product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
