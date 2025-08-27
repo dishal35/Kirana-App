@@ -3,7 +3,8 @@ import type { Product, Transaction, Shop } from '../types';
 
 export class ProductRepository {
   async create(product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    const id = await db.products.add(product as Product);
+    const productWithId = { ...product, id: crypto.randomUUID() } as Product;
+    const id = await db.products.add(productWithId);
     return id.toString();
   }
 
@@ -37,7 +38,8 @@ export class ProductRepository {
 
 export class TransactionRepository {
   async create(transaction: Omit<Transaction, 'id'>): Promise<string> {
-    const id = await db.transactions.add(transaction as Transaction);
+    const transactionWithId = { ...transaction, id: crypto.randomUUID() } as Transaction;
+    const id = await db.transactions.add(transactionWithId);
     return id.toString();
   }
 
@@ -76,7 +78,8 @@ export class TransactionRepository {
 
 export class ShopRepository {
   async create(shop: Omit<Shop, 'id' | 'createdAt'>): Promise<string> {
-    const id = await db.shops.add(shop as Shop);
+    const shopWithId = { ...shop, id: crypto.randomUUID() } as Shop;
+    const id = await db.shops.add(shopWithId);
     return id.toString();
   }
 

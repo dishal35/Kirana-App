@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { OnboardingProvider } from './contexts/OnboardingContext';
 import { OnboardingWizard } from './components/onboarding/OnboardingWizard';
 import { shopRepository } from './dbs/repo';
+import AudioRecorderComponent from './components/AudioRecorderComponent';
 
 function App() {
+  //sets the state for first time users by checking if the shop repository is empty
   const [isFirstTime, setIsFirstTime] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -20,6 +22,7 @@ function App() {
   }
 
   return (
+    //if the user is a first time user, the onboarding wizard is displayed, otherwise the main app content is displayed
     <div className="min-h-screen bg-gray-50">
       {isFirstTime ? (
         <OnboardingProvider>
@@ -29,6 +32,7 @@ function App() {
         <div className="p-4">
           {/* Main app content will go here */}
           <h1>Welcome back to your shop!</h1>
+          <AudioRecorderComponent />
         </div>
       )}
     </div>

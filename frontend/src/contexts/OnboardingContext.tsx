@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useReducer, type ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, type ReactNode, useRef } from 'react';
 import type { Shop, Product } from '../types';
-
+//partial types because some of the fields are optional
 interface OnboardingState {
   currentStep: number;
   shopDetails: Partial<Shop>;
@@ -22,7 +22,8 @@ const initialState: OnboardingState = {
   products: [],
   isComplete: false,
 };
-
+type StepValidationFunction=()=>boolean;
+//onReducer is used to update the state based on the action
 const onboardingReducer = (state: OnboardingState, action: OnboardingAction): OnboardingState => {
   switch (action.type) {
     case 'SET_STEP':
@@ -49,19 +50,45 @@ const onboardingReducer = (state: OnboardingState, action: OnboardingAction): On
       return state;
   }
 };
-
+//react.dispatch is used to dispatch the action to the reducer
 interface OnboardingContextType {
   state: OnboardingState;
   dispatch: React.Dispatch<OnboardingAction>;
+  registerStepValidation: (validator: StepValidationFunction | null) => void;
+  validateStep: (step: number) => boolean;
 }
-
+//createContext is used to create the context
 const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined);
-
+//OnboardingProvider is used to provide the context to the children
 export const OnboardingProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(onboardingReducer, initialState);
-
+  
+  // Store validation function for current step only (not an array)
+  const currentStepValidator = useRef<StepValidationFunction | null>(null);
+  
+  // Register validation function for the current active step
+  const registerStepValidation = (validator: StepValidationFunction | null) => {
+    currentStepValidator.current = validator;
+  };
+  
+  // Run validation for the current step
+  const runStepValidation = (step: number) => {
+    // If no validator is registered, assume step is valid
+    if (!currentStepValidator.current) return true;
+    
+    // Run the registered validator
+    return currentStepValidator.current();
+  };
+  
+  const contextValue: OnboardingContextType = {
+    state,
+    dispatch,
+    registerStepValidation,
+    validateStep: runStepValidation,
+  };
+  
   return (
-    <OnboardingContext.Provider value={{ state, dispatch }}>
+    <OnboardingContext.Provider value={contextValue}>
       {children}
     </OnboardingContext.Provider>
   );

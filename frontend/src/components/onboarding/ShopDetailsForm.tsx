@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { useOnboarding } from '../../contexts/OnboardingContext';
 
 const SHOP_TYPES = [
@@ -12,8 +12,12 @@ const SHOP_TYPES = [
 ];
 
 export const ShopDetailsForm: React.FC = () => {
-  const { state, dispatch } = useOnboarding();
+  const { state, dispatch, registerStepValidation } = useOnboarding();
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  useEffect(() => {
+    registerStepValidation(validateForm);
+    return () => registerStepValidation(null);
+  }, []);
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -26,7 +30,10 @@ export const ShopDetailsForm: React.FC = () => {
       newErrors.type = 'Shop type is required';
     }
 
+    // CRITICAL: Update the errors state so user can see validation errors
     setErrors(newErrors);
+    
+    // Return true if no errors, false if there are errors
     return Object.keys(newErrors).length === 0;
   };
 

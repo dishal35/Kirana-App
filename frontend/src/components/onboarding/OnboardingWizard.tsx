@@ -4,8 +4,9 @@ import { ShopDetailsForm } from './ShopDetailsForm';
 import { ProductCatalogForm } from './ProductCatalogForm';
 import { shopRepository, productRepository } from '../../dbs/repo';
 
+
 export const OnboardingWizard: React.FC = () => {
-  const { state, dispatch } = useOnboarding();
+  const { state, dispatch, validateStep } = useOnboarding();
   const [isLoading, setIsLoading] = React.useState(false);
   const [loadingMessage, setLoadingMessage] = React.useState('');
 
@@ -27,6 +28,13 @@ export const OnboardingWizard: React.FC = () => {
   };
 
   const handleComplete = async () => {
+
+    const isStepValid=validateStep(state.currentStep);
+    if(!isStepValid){
+      alert('Please fix the errors in the current step');
+      return;
+    }
+
     try {
       setIsLoading(true);
       setLoadingMessage('Creating your shop...');
