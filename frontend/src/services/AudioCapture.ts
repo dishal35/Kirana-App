@@ -27,20 +27,6 @@ export interface AudioCaptureService {
         console.log("Already listening");
         return;
       }
-   // 2. Determine the specific type of error (e.g., NotAllowedError for permission denial,
-      //    NotFoundError if no microphone is available).
-      //    (Hint: error as DOMException will help access 'name' property)
-
-      // 3. Based on the error type, construct a user-friendly message.
-      //    Examples:
-      //    - "Microphone access denied. Please enable microphone permissions in your browser settings to use this feature."
-      //    - "No microphone found. Please ensure a microphone is connected and enabled."
-      //    - "An unexpected error occurred while accessing the microphone: [error message]"
-
-      // 4. Invoke the 'onPermissionError' callback with the user-friendly message.
-
-      // 5. Re-throw the error (optional, but good practice) to allow any higher-level
-      //    error handling to catch it if necessary.
 
       try {
         this.mediaStream=await navigator.mediaDevices.getUserMedia({audio:true});
