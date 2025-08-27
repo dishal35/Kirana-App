@@ -2,7 +2,17 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { OnboardingWizard } from '../../components/onboarding/OnboardingWizard';
 import { OnboardingProvider } from '../../contexts/OnboardingContext';
-import { mockShops } from '../../test/mocks';
+import { mockShops, mockProducts } from '../../test/mocks';
+import { shopRepository, productRepository } from '../../dbs/repo';
+
+vi.mock('../../dbs/repo', () => ({
+  shopRepository: {
+    create: vi.fn().mockResolvedValue('test-shop-id')
+  },
+  productRepository: {
+    create: vi.fn().mockResolvedValue('test-product-id')
+  }
+}));
 
 describe('OnboardingWizard', () => {
   const renderWizard = () => {
@@ -16,15 +26,16 @@ describe('OnboardingWizard', () => {
   describe('Shop Details Form', () => {
     it('should render the shop details form first', () => {
       renderWizard();
-      expect(screen.getByText(/shop details/i)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /shop details/i })).toBeInTheDocument();
     });
 
     it('should validate required fields', async () => {
       renderWizard();
       
       // Try to submit without filling required fields
-      const nextButton = screen.getByRole('button', { name: /next/i });
-      fireEvent.click(nextButton);
+      const nameInput = screen.getByLabelText(/shop name/i);
+      fireEvent.change(nameInput, { target: { value: '' } });
+      fireEvent.blur(nameInput);
       
       await waitFor(() => {
         expect(screen.getByText(/shop name is required/i)).toBeInTheDocument();
@@ -41,9 +52,6 @@ describe('OnboardingWizard', () => {
       fireEvent.change(screen.getByLabelText(/shop type/i), {
         target: { value: mockShops.valid.type }
       });
-      fireEvent.change(screen.getByLabelText(/phone/i), {
-        target: { value: mockShops.valid.phone }
-      });
       
       // Submit form
       const nextButton = screen.getByRole('button', { name: /next/i });
@@ -51,7 +59,7 @@ describe('OnboardingWizard', () => {
       
       // Should show product catalog form
       await waitFor(() => {
-        expect(screen.getByText(/product catalog/i)).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /product catalog/i })).toBeInTheDocument();
       });
     });
   });
@@ -73,12 +81,15 @@ describe('OnboardingWizard', () => {
       fireEvent.change(screen.getByLabelText(/price/i), {
         target: { value: mockProducts.valid.price }
       });
+      fireEvent.change(screen.getByLabelText(/category/i), {
+        target: { value: mockProducts.valid.category }
+      });
       fireEvent.change(screen.getByLabelText(/stock/i), {
         target: { value: mockProducts.valid.stock }
       });
       
-      const saveButton = screen.getByRole('button', { name: /save product/i });
-      fireEvent.click(saveButton);
+      const addProductButton = screen.getByRole('button', { name: /add product/i });
+      fireEvent.click(addProductButton);
       
       await waitFor(() => {
         expect(screen.getByText(mockProducts.valid.name)).toBeInTheDocument();
@@ -94,8 +105,11 @@ describe('OnboardingWizard', () => {
       await fillAndSubmitShopDetails();
       await fillAndSubmitProductCatalog();
       
+      const completeButton = screen.getByRole('button', { name: /complete setup/i });
+      fireEvent.click(completeButton);
+
       await waitFor(() => {
-        expect(screen.getByText(/setup complete/i)).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /setup complete/i })).toBeInTheDocument();
       });
     });
   });
@@ -109,36 +123,33 @@ async function fillAndSubmitShopDetails() {
   fireEvent.change(screen.getByLabelText(/shop type/i), {
     target: { value: mockShops.valid.type }
   });
-  fireEvent.change(screen.getByLabelText(/phone/i), {
-    target: { value: mockShops.valid.phone }
-  });
   
   const nextButton = screen.getByRole('button', { name: /next/i });
   fireEvent.click(nextButton);
   
   await waitFor(() => {
-    expect(screen.getByText(/product catalog/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /product catalog/i })).toBeInTheDocument();
   });
 }
 
 // Helper function to fill and submit product catalog
 async function fillAndSubmitProductCatalog() {
-  const addButton = screen.getByRole('button', { name: /add product/i });
-  fireEvent.click(addButton);
-  
   fireEvent.change(screen.getByLabelText(/product name/i), {
     target: { value: mockProducts.valid.name }
+  });
+  fireEvent.change(screen.getByLabelText(/category/i), {
+    target: { value: mockProducts.valid.category }
   });
   fireEvent.change(screen.getByLabelText(/price/i), {
     target: { value: mockProducts.valid.price }
   });
-  fireEvent.change(screen.getByLabelText(/stock/i), {
+  fireEvent.change(screen.getByLabelText(/initial stock/i), {
     target: { value: mockProducts.valid.stock }
   });
   
-  const saveButton = screen.getByRole('button', { name: /save product/i });
-  fireEvent.click(saveButton);
+  const addButton = screen.getByRole('button', { name: /add product/i });
+  fireEvent.click(addButton);
   
-  const finishButton = screen.getByRole('button', { name: /finish/i });
-  fireEvent.click(finishButton);
+  const completeButton = screen.getByRole('button', { name: /complete setup/i });
+  fireEvent.click(completeButton);
 }

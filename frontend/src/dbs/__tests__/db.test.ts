@@ -1,16 +1,20 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { db } from '../../dbs/db';
+import { ShopkeeperDatabase } from '../../dbs/db';
 import { mockProducts, mockTransactions, mockShops } from '../../test/mocks';
 
 describe('Database Operations', () => {
+  let db: ShopkeeperDatabase;
+
   beforeEach(async () => {
     // Clear indexedDB
     indexedDB.deleteDatabase('TestShopkeeperDB');
+    db = new ShopkeeperDatabase('TestShopkeeperDB');
     await db.open();
   });
 
   afterEach(async () => {
     await db.close();
+    await indexedDB.deleteDatabase('TestShopkeeperDB');
   });
 
   describe('Products', () => {
@@ -60,15 +64,18 @@ describe('Database Operations', () => {
     });
 
     it('should retrieve transactions by date range', async () => {
+      const startDate = new Date('2025-08-25T00:00:00Z');
+      const endDate = new Date('2025-08-26T23:59:59Z');
+
       const transaction1 = { 
         ...mockTransactions.valid, 
         id: '1',
-        timestamp: new Date('2025-08-25') 
+        timestamp: startDate
       };
       const transaction2 = { 
         ...mockTransactions.valid,
         id: '2',
-        timestamp: new Date('2025-08-26') 
+        timestamp: endDate
       };
       
       // Add transactions one by one to avoid duplicate key error
@@ -77,7 +84,7 @@ describe('Database Operations', () => {
       
       const transactions = await db.transactions
         .where('timestamp')
-        .between(new Date('2025-08-25'), new Date('2025-08-26'))
+        .between(startDate, new Date('2025-08-27T00:00:00Z'))
         .toArray();
       
       expect(transactions).toHaveLength(2);

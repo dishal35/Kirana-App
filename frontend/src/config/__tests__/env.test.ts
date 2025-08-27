@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { config } from '../../config/env';
 
+// Import the actual functions
+import { validateConfig, getGeminiApiKey } from '../../config/env';
+
 // Mock Vite's import.meta.env
 vi.mock('../../config/env', () => ({
   config: {
@@ -13,11 +16,11 @@ vi.mock('../../config/env', () => ({
       isDev: true
     }
   },
-  validateConfig: () => ({
+  getGeminiApiKey: vi.fn(() => 'test-key'),
+  validateConfig: vi.fn(() => ({
     isValid: true,
     missingVars: []
-  }),
-  getGeminiApiKey: () => 'test-key'
+  }))
 }));
 
 describe('Environment Configuration', () => {
@@ -45,7 +48,7 @@ describe('Environment Configuration', () => {
     });
 
     it('should throw error when getting API key if not configured', () => {
-      vi.mocked(getGeminiApiKey).mockImplementation(() => {
+      (getGeminiApiKey as jest.Mock).mockImplementation(() => {
         throw new Error('Gemini API key is not configured');
       });
       expect(() => getGeminiApiKey()).toThrow('Gemini API key is not configured');
@@ -60,7 +63,7 @@ describe('Environment Configuration', () => {
     });
 
     it('should detect missing required variables', () => {
-      vi.mocked(validateConfig).mockReturnValue({
+      (validateConfig as jest.Mock).mockReturnValue({
         isValid: false,
         missingVars: ['VITE_GEMINI_API_KEY']
       });

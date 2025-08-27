@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import './App.css';
 import { OnboardingProvider } from './contexts/OnboardingContext';
-import OnboardingWizard from './components/onboarding/OnboardingWizard';
+import { OnboardingWizard } from './components/onboarding/OnboardingWizard';
 import { shopRepository } from './dbs/repo';
 
 function App() {

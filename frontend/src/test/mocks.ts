@@ -4,6 +4,7 @@ const now = new Date();
 
 export const mockProducts: { [key: string]: Product } = {
   valid: {
+    id: 'test-id',
     name: "Test Product",
     price: 100,
     stock: 10,
@@ -14,6 +15,7 @@ export const mockProducts: { [key: string]: Product } = {
     updatedAt: now
   },
   invalid: {
+    id: 'invalid-id',
     name: "",
     price: -10,
     stock: -1,
@@ -34,12 +36,14 @@ export const mockTransactionItems: { [key: string]: TransactionItem } = {
 
 export const mockTransactions: { [key: string]: Transaction } = {
   valid: {
+    id: 'test-transaction-id',
     amount: 100,
     type: "upi",
     products: [mockTransactionItems.valid],
     timestamp: now
   },
   invalid: {
+    id: 'invalid-transaction-id',
     amount: -50,
     type: "cash",
     products: [],
@@ -64,6 +68,7 @@ export const mockShopSettings: { [key: string]: ShopSettings } = {
 
 export const mockShops: { [key: string]: Shop } = {
   valid: {
+    id: 'test-shop-id',
     name: "Test Shop",
     type: "Grocery",
     ownerId: "test-owner",
@@ -71,6 +76,7 @@ export const mockShops: { [key: string]: Shop } = {
     createdAt: now
   },
   invalid: {
+    id: 'invalid-shop-id',
     name: "",
     type: "Invalid",
     ownerId: "",
