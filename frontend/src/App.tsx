@@ -4,15 +4,15 @@ import { OnboardingWizard } from './components/onboarding/OnboardingWizard';
 import { shopRepository } from './dbs/repo';
 import AudioRecorderComponent from './components/AudioRecorderComponent';
 import SimpleAmountTest from './examples/SimpleAmountTest';
-import TestPage from './TestPage';
 import SimpleVoiceDemo from './examples/SimpleVoiceDemo';
 import RealTimeVoiceDemo from './examples/RealTimeVoiceDemo';
+import ProductSuggestionExample from './examples/ProductSuggestionExample';
 import './utils/debugAudio'; // Load debug utilities
 
 function App() {
   //sets the state for first time users by checking if the shop repository is empty
   const [isFirstTime, setIsFirstTime] = useState<boolean | null>(null);
-  const [currentView, setCurrentView] = useState<'main' | 'amount-extraction' | 'voice-demo' | 'real-voice'>('main');
+  const [currentView, setCurrentView] = useState<'main' | 'amount-extraction' | 'voice-demo' | 'real-voice' | 'product-suggestions'>('main');
 
   useEffect(() => {
     const checkFirstTimeUser = async () => {
@@ -51,6 +51,8 @@ function App() {
         return <SimpleVoiceDemo />;
       case 'real-voice':
         return <RealTimeVoiceDemo />;
+      case 'product-suggestions':
+        return <ProductSuggestionExample />;
       case 'main':
       default:
         return (
@@ -115,6 +117,16 @@ function App() {
                     }`}
                   >
                     🎙️ Real Voice
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('product-suggestions')}
+                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                      currentView === 'product-suggestions'
+                        ? 'border-blue-500 text-gray-900'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    🛍️ Product Suggestions
                   </button>
                 </div>
               </div>

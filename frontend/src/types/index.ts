@@ -67,8 +67,9 @@ export interface InventoryStatus {
   totalProducts: number;
   lowStockProducts: Product[];
   totalValue: number;
-}export inte
-rface UpiDetectionResult {
+}
+
+export interface UpiDetectionResult {
   detected: boolean;
   timestamp: Date;
   confidence: number;

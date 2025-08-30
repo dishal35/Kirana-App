@@ -3,12 +3,14 @@ import { useOnboarding } from '../../contexts/OnboardingContext';
 import { ShopDetailsForm } from './ShopDetailsForm';
 import { ProductCatalogForm } from './ProductCatalogForm';
 import { shopRepository, productRepository } from '../../dbs/repo';
+import { DemoDataService } from '../../services/DemoDataService';
 
 
 export const OnboardingWizard: React.FC = () => {
   const { state, dispatch, validateStep } = useOnboarding();
   const [isLoading, setIsLoading] = React.useState(false);
   const [loadingMessage, setLoadingMessage] = React.useState('');
+  const [showDemoOption, setShowDemoOption] = React.useState(true);
 
   const steps = [
     { title: 'Shop Details', component: <ShopDetailsForm /> },
@@ -28,9 +30,8 @@ export const OnboardingWizard: React.FC = () => {
   };
 
   const handleComplete = async () => {
-
-    const isStepValid=validateStep(state.currentStep);
-    if(!isStepValid){
+    const isStepValid = validateStep(state.currentStep);
+    if (!isStepValid) {
       alert('Please fix the errors in the current step');
       return;
     }
@@ -40,7 +41,7 @@ export const OnboardingWizard: React.FC = () => {
       setLoadingMessage('Creating your shop...');
 
       // Create shop
-      const shopId = await shopRepository.create({
+      await shopRepository.create({
         ...state.shopDetails as any,
         ownerId: 'default', // In a real app, this would come from auth
         settings: {
@@ -76,6 +77,26 @@ export const OnboardingWizard: React.FC = () => {
     }
   };
 
+  const handleDemoSetup = async () => {
+    try {
+      setIsLoading(true);
+      setLoadingMessage('Setting up demo shop...');
+      
+      await DemoDataService.initializeDemoShop();
+      
+      setLoadingMessage('Demo setup complete!');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      dispatch({ type: 'COMPLETE_ONBOARDING' });
+    } catch (error) {
+      console.error('Failed to setup demo shop:', error);
+      alert('Failed to setup demo shop. Please try again.');
+    } finally {
+      setIsLoading(false);
+      setLoadingMessage('');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 py-12 px-4 sm:px-6 lg:px-8 transition-all duration-500">
       <div className="max-w-4xl mx-auto">
@@ -85,6 +106,54 @@ export const OnboardingWizard: React.FC = () => {
             <p className="mt-2 text-base text-gray-600">A few quick steps to get your shop ready.</p>
           </div>
         </header>
+
+        {/* Demo Option */}
+        {showDemoOption && (
+          <div className="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl shadow-lg p-6 border border-green-100 hover:border-green-200 transition-all">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
+                    <span className="text-white text-lg">🚀</span>
+                  </div>
+                  <h3 className="text-xl font-bold text-green-800">Try Demo Shop</h3>
+                </div>
+                <p className="text-green-700 mb-4">
+                  Want to explore the app first? Set up a demo shop with 30+ products and sample transactions to see how everything works.
+                </p>
+                <div className="flex flex-wrap gap-2 text-sm text-green-600 mb-4">
+                  <span className="px-3 py-1 bg-green-100 rounded-full">✓ 30+ Products</span>
+                  <span className="px-3 py-1 bg-green-100 rounded-full">✓ Sample Transactions</span>
+                  <span className="px-3 py-1 bg-green-100 rounded-full">✓ AI Suggestions</span>
+                  <span className="px-3 py-1 bg-green-100 rounded-full">✓ Ready to Use</span>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleDemoSetup}
+                    disabled={isLoading}
+                    className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium rounded-xl hover:from-green-600 hover:to-emerald-600 shadow-lg shadow-green-200 transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? 'Setting up...' : 'Setup Demo Shop'}
+                  </button>
+                  <button
+                    onClick={() => setShowDemoOption(false)}
+                    className="px-6 py-3 bg-white text-green-700 font-medium rounded-xl hover:bg-green-50 border-2 border-green-200 hover:border-green-300 transition-all"
+                  >
+                    Setup My Own Shop
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDemoOption(false)}
+                className="ml-4 p-2 text-green-500 hover:text-green-700 hover:bg-green-100 rounded-lg transition-all"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Progress */}
         <div className="mb-8 bg-white/90 backdrop-blur-lg rounded-2xl shadow-lg p-6 border border-indigo-50 hover:border-indigo-100 transition-all">
