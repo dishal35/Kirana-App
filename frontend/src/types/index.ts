@@ -67,4 +67,38 @@ export interface InventoryStatus {
   totalProducts: number;
   lowStockProducts: Product[];
   totalValue: number;
+}export inte
+rface UpiDetectionResult {
+  detected: boolean;
+  timestamp: Date;
+  confidence: number;
+  message: string;
+}
+
+export interface AudioQualityMetrics {
+  volume: number;
+  noiseLevel: number;
+  clarity: number;
+  isAcceptable: boolean;
+}
+
+export interface AudioCaptureConfig {
+  vadThreshold?: number;
+  noiseThreshold?: number;
+  minRecordingDuration?: number;
+  maxRecordingDuration?: number;
+  sampleRate?: number;
+  enableNoiseFiltering?: boolean;
+}
+
+export interface TranscriptionResult {
+  text: string;
+  confidence: number;
+  processingTime: number;
+}
+
+export interface TranscriptionError {
+  code: 'API_ERROR' | 'NETWORK_ERROR' | 'INVALID_AUDIO' | 'RATE_LIMIT' | 'AUTH_ERROR';
+  message: string;
+  retryable: boolean;
 }

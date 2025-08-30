@@ -3,7 +3,7 @@
 // This file will handle the core logic for Voice Activity Detection (VAD)
 // and then specifically look for patterns characteristic of UPI audio alerts.
 
-import type { Transaction} from '../types';
+import type { Transaction, UpiDetectionResult } from '../types';
 
 /**
  * @class UpiPatternDetector
