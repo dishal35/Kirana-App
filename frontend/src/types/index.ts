@@ -103,3 +103,33 @@ export interface TranscriptionError {
   message: string;
   retryable: boolean;
 }
+
+export interface InventoryAuditEntry {
+  id?: string;
+  productId: string;
+  type: 'sale' | 'adjustment' | 'restock' | 'expiry' | 'damage';
+  quantityChange: number; // Positive for additions, negative for reductions
+  previousStock: number;
+  newStock: number;
+  reason?: string;
+  timestamp: Date;
+  transactionId?: string; // Link to transaction if this was from a sale
+}
+
+export interface StockAlert {
+  id?: string;
+  productId: string;
+  type: 'low_stock' | 'out_of_stock' | 'expiry_warning' | 'expired';
+  message: string;
+  threshold?: number;
+  expiryDate?: Date;
+  createdAt: Date;
+  acknowledged: boolean;
+}
+
+export interface InventoryAdjustment {
+  productId: string;
+  quantityChange: number;
+  reason: string;
+  type: 'adjustment' | 'restock' | 'damage' | 'expiry';
+}

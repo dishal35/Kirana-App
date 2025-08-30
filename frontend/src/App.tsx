@@ -8,6 +8,7 @@ import SimpleVoiceDemo from './examples/SimpleVoiceDemo';
 import RealTimeVoiceDemo from './examples/RealTimeVoiceDemo';
 import ProductSuggestionExample from './examples/ProductSuggestionExample';
 import { TransactionConfirmationExample } from './examples/TransactionConfirmationExample';
+import { BusinessDashboardExample } from './examples/BusinessDashboardExample';
 import { DebugInfo } from './components/DebugInfo';
 import './utils/debugAudio'; // Load debug utilities
 import './utils/initDemoData'; // Load demo data utility
@@ -16,7 +17,7 @@ import './utils/testDatabase'; // Load database test utility
 function App() {
   //sets the state for first time users by checking if the shop repository is empty
   const [isFirstTime, setIsFirstTime] = useState<boolean | null>(null);
-  const [currentView, setCurrentView] = useState<'main' | 'amount-extraction' | 'voice-demo' | 'real-voice' | 'product-suggestions' | 'transaction-confirmation'>('main');
+  const [currentView, setCurrentView] = useState<'main' | 'amount-extraction' | 'voice-demo' | 'real-voice' | 'product-suggestions' | 'transaction-confirmation' | 'dashboard'>('main');
 
   useEffect(() => {
     const checkFirstTimeUser = async () => {
@@ -66,6 +67,8 @@ function App() {
         return <ProductSuggestionExample />;
       case 'transaction-confirmation':
         return <TransactionConfirmationExample />;
+      case 'dashboard':
+        return <BusinessDashboardExample />;
       case 'main':
       default:
         return (
@@ -153,6 +156,16 @@ function App() {
                     }`}
                   >
                     💳 Transaction Confirmation
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('dashboard')}
+                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                      currentView === 'dashboard'
+                        ? 'border-blue-500 text-gray-900'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    📊 Dashboard
                   </button>
                 </div>
               </div>

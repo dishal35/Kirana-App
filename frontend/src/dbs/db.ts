@@ -1,19 +1,23 @@
 import Dexie from 'dexie';
 import type { Table } from 'dexie';
-import type { Product, Transaction, Shop } from '../types';
+import type { Product, Transaction, Shop, InventoryAuditEntry, StockAlert } from '../types';
 
 export class ShopkeeperDatabase extends Dexie {
   products!: Table<Product>;
   transactions!: Table<Transaction>;
   shops!: Table<Shop>;
+  inventoryAudit!: Table<InventoryAuditEntry>;
+  stockAlerts!: Table<StockAlert>;
 
   constructor(dbName = 'ShopkeeperUPITracker') {
     super(dbName);
     
     this.version(1).stores({
-      products: 'id, name, category, stock, reorderThreshold, createdAt, updatedAt',
+      products: 'id, name, category, stock, reorderThreshold, createdAt, updatedAt, expiryDate',
       transactions: 'id, amount, type, timestamp',
-      shops: 'id, name, type, ownerId, createdAt'
+      shops: 'id, name, type, ownerId, createdAt',
+      inventoryAudit: 'id, productId, type, timestamp, transactionId',
+      stockAlerts: 'id, productId, type, createdAt'
     });
 
     // Add hooks for automatic timestamp updates
@@ -33,6 +37,16 @@ export class ShopkeeperDatabase extends Dexie {
     });
 
     this.shops.hook('creating', function (primKey, obj, trans) {
+      obj.createdAt = new Date();
+    });
+
+    this.inventoryAudit.hook('creating', function (primKey, obj, trans) {
+      if (!obj.timestamp) {
+        obj.timestamp = new Date();
+      }
+    });
+
+    this.stockAlerts.hook('creating', function (primKey, obj, trans) {
       obj.createdAt = new Date();
     });
 
