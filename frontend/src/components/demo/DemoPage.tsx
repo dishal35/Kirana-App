@@ -3,10 +3,12 @@ import DemoControlPanel from './DemoControlPanel';
 import DemoModeIndicator from './DemoModeIndicator';
 import { hackathonDemoService, type DemoMetrics } from '../../services/HackathonDemoService';
 import { DemoDataService } from '../../services/DemoDataService';
+import { ManualAudioTest } from '../../examples/ManualAudioTest';
 
 export const DemoPage: React.FC = () => {
   const [demoStats, setDemoStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'demo' | 'audio-test'>('demo');
 
   useEffect(() => {
     loadDemoStats();
@@ -63,8 +65,37 @@ export const DemoPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Demo Stats Overview */}
-        {demoStats && (
+        {/* Tab Navigation */}
+        <div className="flex justify-center mb-8">
+          <div className="bg-white rounded-lg shadow-sm p-1 flex">
+            <button
+              onClick={() => setActiveTab('demo')}
+              className={`px-6 py-2 rounded-md font-medium transition-colors ${
+                activeTab === 'demo'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Demo Environment
+            </button>
+            <button
+              onClick={() => setActiveTab('audio-test')}
+              className={`px-6 py-2 rounded-md font-medium transition-colors ${
+                activeTab === 'audio-test'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              🎤 Manual Audio Test
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'demo' && (
+          <>
+            {/* Demo Stats Overview */}
+            {demoStats && (
           <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">📊 Demo Shop Overview</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -190,6 +221,13 @@ export const DemoPage: React.FC = () => {
             </div>
           </div>
         </div>
+          </>
+        )}
+
+        {/* Manual Audio Test Tab */}
+        {activeTab === 'audio-test' && (
+          <ManualAudioTest />
+        )}
       </div>
     </div>
   );

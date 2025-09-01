@@ -73,13 +73,38 @@ interface TransactionConfirmationModalProps {
   onCancel: () => void;
 }
 
-export const TransactionConfirmationModal: React.FC<TransactionConfirmationModalProps> = (props) => (
-  <Suspense fallback={<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <PageLoader text="Loading transaction..." />
-  </div>}>
-    <LazyTransactionConfirmationModal {...props} />
-  </Suspense>
-);
+export const TransactionConfirmationModal: React.FC<TransactionConfirmationModalProps> = ({ 
+  isOpen, 
+  transactionResult, 
+  products, 
+  onConfirm, 
+  onCancel 
+}) => {
+  const handleTransactionConfirmed = async (transaction: { products: { productId: string; quantity: number }[] }) => {
+    // Convert transaction to the expected format for onConfirm
+    const selections = transaction.products.map((item: any) => ({
+      productId: item.productId,
+      quantity: item.quantity
+    }));
+    onConfirm(selections);
+  };
+
+  return (
+    <Suspense fallback={<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <PageLoader text="Loading transaction..." />
+    </div>}>
+      <LazyTransactionConfirmationModal 
+        isOpen={isOpen}
+        onClose={onCancel}
+        amount={transactionResult?.amount || 0}
+        suggestedProducts={transactionResult?.suggestedProducts || []}
+        transcription={transactionResult?.transcription}
+        confidence={transactionResult?.confidence}
+        onTransactionConfirmed={handleTransactionConfirmed}
+      />
+    </Suspense>
+  );
+};
 
 export const DemoPage: React.FC = () => (
   <Suspense fallback={<PageLoader text="Loading demo environment..." />}>

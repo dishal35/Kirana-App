@@ -1,14 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { AccountSwitcher } from './auth/AccountSwitcher';
 import { DateNavigator } from './common/DateNavigator';
+import { NotificationBell } from './notifications/NotificationBell';
+import { NotificationPanel } from './notifications/NotificationPanel';
 
 interface NavigationProps {
   className?: string;
 }
 
 export const Navigation: React.FC<NavigationProps> = ({ className = '' }) => {
-  const { state, navigateTo } = useApp();
+  const { 
+    state, 
+    navigateTo, 
+    markNotificationAsRead, 
+    markAllNotificationsAsRead, 
+    clearAllNotifications 
+  } = useApp();
+  const [showNotificationPanel, setShowNotificationPanel] = useState(false);
 
   const navigationItems = [
     {
@@ -125,6 +134,31 @@ export const Navigation: React.FC<NavigationProps> = ({ className = '' }) => {
               </div>
             )}
 
+            {/* Notification Bell */}
+            <div className="relative">
+              <NotificationBell
+                onClick={() => setShowNotificationPanel(!showNotificationPanel)}
+              />
+              
+              {/* Notification Panel */}
+              {showNotificationPanel && (
+                <div className="absolute right-0 top-full mt-2 z-50">
+                  <NotificationPanel
+                    notifications={state.notifications}
+                    onClose={() => setShowNotificationPanel(false)}
+                    onMarkAsRead={markNotificationAsRead}
+                    onMarkAllAsRead={markAllNotificationsAsRead}
+                    onClearAll={clearAllNotifications}
+                    onNavigate={(page, params) => {
+                      navigateTo(page as any);
+                      setShowNotificationPanel(false);
+                      // TODO: Handle navigation params for specific actions
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
             {/* Language Selector */}
             <select
               value={state.language}
@@ -150,7 +184,14 @@ export const Navigation: React.FC<NavigationProps> = ({ className = '' }) => {
 
 // Mobile Navigation Component
 export const MobileNavigation: React.FC = () => {
-  const { state, navigateTo } = useApp();
+  const { 
+    state, 
+    navigateTo, 
+    markNotificationAsRead, 
+    markAllNotificationsAsRead, 
+    clearAllNotifications 
+  } = useApp();
+  const [showMobileNotifications, setShowMobileNotifications] = useState(false);
 
   const navigationItems = [
     { id: 'dashboard' as const, icon: '📊', label: 'Home' },
@@ -161,23 +202,62 @@ export const MobileNavigation: React.FC = () => {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 md:hidden">
-      <div className="flex justify-around">
-        {navigationItems.map((item) => (
+    <>
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 md:hidden">
+        <div className="flex justify-around">
+          {navigationItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => navigateTo(item.id)}
+              className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
+                state.currentPage === item.id
+                  ? 'bg-blue-100 text-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <span className="text-xl mb-1">{item.icon}</span>
+              <span className="text-xs font-medium">{item.label}</span>
+            </button>
+          ))}
+          
+          {/* Mobile Notification Bell */}
           <button
-            key={item.id}
-            onClick={() => navigateTo(item.id)}
-            className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
-              state.currentPage === item.id
-                ? 'bg-blue-100 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
+            onClick={() => setShowMobileNotifications(!showMobileNotifications)}
+            className="flex flex-col items-center py-2 px-3 rounded-lg transition-colors text-gray-600 hover:text-gray-900 relative"
           >
-            <span className="text-xl mb-1">{item.icon}</span>
-            <span className="text-xs font-medium">{item.label}</span>
+            <div className="relative">
+              <span className="text-xl mb-1">🔔</span>
+              {state.unreadNotificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {state.unreadNotificationCount > 9 ? '9+' : state.unreadNotificationCount}
+                </span>
+              )}
+            </div>
+            <span className="text-xs font-medium">Alerts</span>
           </button>
-        ))}
+        </div>
       </div>
-    </div>
+
+      {/* Mobile Notification Panel */}
+      {showMobileNotifications && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 md:hidden">
+          <div className="absolute bottom-16 left-0 right-0 bg-white rounded-t-lg max-h-96 overflow-hidden">
+            <NotificationPanel
+              notifications={state.notifications}
+              onClose={() => setShowMobileNotifications(false)}
+              onMarkAsRead={markNotificationAsRead}
+              onMarkAllAsRead={markAllNotificationsAsRead}
+              onClearAll={clearAllNotifications}
+              onNavigate={(page, params) => {
+                navigateTo(page as any);
+                setShowMobileNotifications(false);
+                // TODO: Handle navigation params for specific actions
+              }}
+              isMobile={true}
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 };

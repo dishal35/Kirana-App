@@ -3,9 +3,12 @@ import { dashboardService, type DashboardMetrics } from '../../services/Dashboar
 import { SimpleDemoService } from '../../services/SimpleDemoService';
 import { productRepository } from '../../dbs/repo';
 import { DateNavigator } from '../common/DateNavigator';
-import { ClickToSpeakAudio } from '../audio/ClickToSpeakAudio';
+import { AudioTransactionCapture } from '../audio/AudioTransactionCapture';
+import { ManualAmountEntry } from '../transaction/ManualAmountEntry';
 import { useDate } from '../../contexts/DateContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useApp } from '../../contexts/AppContext';
+import type { Notification } from '../../types';
 
 // Icon components for better visual design
 const SalesIcon = () => (
@@ -35,11 +38,17 @@ const TrendIcon = () => (
 export const BusinessDashboard: React.FC = () => {
   const { selectedDate } = useDate();
   const { user } = useAuth();
+  const { state, navigateTo, refreshData } = useApp();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [dailySummary, setDailySummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [notificationSummary, setNotificationSummary] = useState<{
+    total: number;
+    critical: number;
+    actionable: number;
+  }>({ total: 0, critical: 0, actionable: 0 });
 
   const loadMetrics = async () => {
     try {
@@ -61,6 +70,14 @@ export const BusinessDashboard: React.FC = () => {
         });
       }
       
+      // Calculate notification summary
+      const notifications = state.notifications;
+      setNotificationSummary({
+        total: notifications.length,
+        critical: notifications.filter(n => n.priority === 'critical').length,
+        actionable: notifications.filter(n => n.actionable && !n.read).length
+      });
+      
       setLastUpdated(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load dashboard metrics');
@@ -71,7 +88,7 @@ export const BusinessDashboard: React.FC = () => {
 
   useEffect(() => {
     loadMetrics();
-  }, [selectedDate, user?.type]); // Reload when date or user changes
+  }, [selectedDate, user?.type, state.notifications]); // Reload when date, user, or notifications change
 
   useEffect(() => {
     loadMetrics();
@@ -145,42 +162,42 @@ export const BusinessDashboard: React.FC = () => {
         </button>
       </div>
 
-      {/* Date Navigator */}
-      <DateNavigator />
+      {/* Date Navigator - Temporarily removed for testing */}
+      {/* <DateNavigator /> */}
 
-      {/* Click to Speak Audio */}
-      <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg p-6 border border-indigo-50">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">🎤 Voice Transaction Entry</h3>
-        <ClickToSpeakAudio 
-          onTransactionDetected={async (result) => {
-            console.log('Transaction detected:', result);
-            
-            // For demo purposes, create a simple transaction
-            if (user?.type === 'demo' && result.amount > 0) {
-              try {
-                // Get a random product for the transaction
-                const allProducts = await productRepository.getAll();
-                if (allProducts.length > 0) {
-                  const randomProduct = allProducts[Math.floor(Math.random() * allProducts.length)];
-                  
-                  await SimpleDemoService.addManualTransaction(
-                    result.amount,
-                    result.transcription,
-                    [{ productId: randomProduct.id!, quantity: 1 }]
-                  );
-                  
-                  // Refresh the dashboard
-                  loadMetrics();
-                  
-                  alert(`✅ Transaction created: ₹${result.amount} for ${randomProduct.name}`);
-                }
-              } catch (error) {
-                console.error('Failed to create transaction:', error);
-                alert('Failed to create transaction. Please try again.');
-              }
-            }
-          }}
-        />
+      {/* Transaction Entry Options */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Manual Amount Entry */}
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg p-6 border border-green-50">
+          <ManualAmountEntry
+            onTransactionCompleted={async (transactionId) => {
+              console.log('Manual transaction completed:', transactionId);
+              // Refresh dashboard data and app state
+              await Promise.all([loadMetrics(), refreshData()]);
+            }}
+            onError={(error) => {
+              console.error('Manual transaction error:', error);
+              setError(error);
+            }}
+            className="border-0 shadow-none p-0 bg-transparent"
+          />
+        </div>
+
+        {/* Audio Transaction Capture */}
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg p-6 border border-indigo-50">
+          <AudioTransactionCapture
+            onTransactionCompleted={async (transactionId) => {
+              console.log('Audio transaction completed:', transactionId);
+              // Refresh dashboard data and app state
+              await Promise.all([loadMetrics(), refreshData()]);
+            }}
+            onError={(error) => {
+              console.error('Audio transaction error:', error);
+              setError(error);
+            }}
+            className="border-0 shadow-none p-0 bg-transparent"
+          />
+        </div>
       </div>
 
       {/* Key Metrics Cards */}
@@ -261,6 +278,105 @@ export const BusinessDashboard: React.FC = () => {
                 Per sale today
               </p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Notification Summary & Quick Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Notification Summary */}
+        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+            <button
+              onClick={() => navigateTo('dashboard')} // This will open the notification panel via navigation
+              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+            >
+              View All
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-900">{notificationSummary.total}</div>
+              <div className="text-xs text-gray-500">Total</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-red-600">{notificationSummary.critical}</div>
+              <div className="text-xs text-gray-500">Critical</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">{notificationSummary.actionable}</div>
+              <div className="text-xs text-gray-500">Actionable</div>
+            </div>
+          </div>
+
+          {/* Recent Critical Notifications */}
+          {state.notifications.filter(n => n.priority === 'critical' && !n.read).slice(0, 2).map((notification) => (
+            <div key={notification.id} className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start">
+                <span className="text-red-600 text-sm mr-2">🚨</span>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-red-800">{notification.title}</p>
+                  <p className="text-xs text-red-600">{notification.message}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Quick Actions */}
+        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+          
+          <div className="space-y-3">
+            <button
+              onClick={() => navigateTo('transactions')}
+              className="w-full flex items-center justify-between p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+            >
+              <div className="flex items-center">
+                <span className="text-blue-600 text-lg mr-3">💳</span>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-blue-900">Transaction Logs</p>
+                  <p className="text-xs text-blue-600">View detailed transaction history</p>
+                </div>
+              </div>
+              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            <button
+              onClick={() => navigateTo('inventory')}
+              className="w-full flex items-center justify-between p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+            >
+              <div className="flex items-center">
+                <span className="text-green-600 text-lg mr-3">📦</span>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-green-900">Inventory Management</p>
+                  <p className="text-xs text-green-600">Manage stock and track expiry</p>
+                </div>
+              </div>
+              <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            <button
+              onClick={() => navigateTo('chat')}
+              className="w-full flex items-center justify-between p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+            >
+              <div className="flex items-center">
+                <span className="text-purple-600 text-lg mr-3">🤖</span>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-purple-900">AI Assistant</p>
+                  <p className="text-xs text-purple-600">Get business insights and help</p>
+                </div>
+              </div>
+              <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>

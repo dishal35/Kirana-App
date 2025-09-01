@@ -51,7 +51,7 @@ export const TransactionConfirmationModal: React.FC<TransactionConfirmationModal
       // Auto-select first suggested product if available
       if (suggestedProducts.length > 0) {
         const firstSuggestion = suggestedProducts[0];
-        const suggestedQuantity = Math.max(1, Math.floor(amount / firstSuggestion.price));
+        const suggestedQuantity = Math.max(1, Math.floor((amount || 0) / firstSuggestion.price));
         setSelectedProducts([{
           product: firstSuggestion,
           quantity: Math.min(suggestedQuantity, firstSuggestion.stock)
@@ -151,15 +151,15 @@ export const TransactionConfirmationModal: React.FC<TransactionConfirmationModal
   };
 
   const handleQuickConfirm = async (product: Product) => {
-    const quantity = Math.max(1, Math.floor(amount / product.price));
+    const quantity = Math.max(1, Math.floor((amount || 0) / product.price));
     const actualQuantity = Math.min(quantity, product.stock);
     
     setSelectedProducts([{ product, quantity: actualQuantity }]);
     
     // Auto-confirm if the amount matches closely
     const calculatedTotal = product.price * actualQuantity;
-    const difference = Math.abs(calculatedTotal - amount);
-    const tolerance = amount * 0.1; // 10% tolerance
+    const difference = Math.abs(calculatedTotal - (amount || 0));
+    const tolerance = (amount || 0) * 0.1; // 10% tolerance
     
     if (difference <= tolerance) {
       // Auto-confirm for close matches
@@ -171,7 +171,7 @@ export const TransactionConfirmationModal: React.FC<TransactionConfirmationModal
 
   const displayProducts = showAllProducts ? allProducts : suggestedProducts;
   const total = calculateTotal();
-  const amountDifference = total - amount;
+  const amountDifference = total - (amount || 0);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -180,7 +180,7 @@ export const TransactionConfirmationModal: React.FC<TransactionConfirmationModal
         <div className="bg-green-600 text-white p-4 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-bold">Transaction Received</h2>
-            <p className="text-green-100">₹{amount.toFixed(2)} received via {transactionType.toUpperCase()}</p>
+            <p className="text-green-100">₹{(amount || 0).toFixed(2)} received via {transactionType.toUpperCase()}</p>
             {transcription && (
               <p className="text-green-200 text-sm mt-1">"{transcription}"</p>
             )}
@@ -286,7 +286,7 @@ export const TransactionConfirmationModal: React.FC<TransactionConfirmationModal
 
           {/* Transaction Summary */}
           <TransactionSummary
-            originalAmount={amount}
+            originalAmount={amount || 0}
             calculatedTotal={total}
             amountDifference={amountDifference}
             selectedProductsCount={selectedProducts.length}

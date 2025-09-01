@@ -1,6 +1,6 @@
 import Dexie from 'dexie';
 import type { Table } from 'dexie';
-import type { Product, Transaction, Shop, InventoryAuditEntry, StockAlert } from '../types';
+import type { Product, Transaction, Shop, InventoryAuditEntry, StockAlert, Notification, BulkInventoryOperation } from '../types';
 
 export class ShopkeeperDatabase extends Dexie {
   products!: Table<Product>;
@@ -8,6 +8,8 @@ export class ShopkeeperDatabase extends Dexie {
   shops!: Table<Shop>;
   inventoryAudit!: Table<InventoryAuditEntry>;
   stockAlerts!: Table<StockAlert>;
+  notifications!: Table<Notification>;
+  bulkOperations!: Table<BulkInventoryOperation>;
 
   constructor(dbName = 'ShopkeeperUPITracker') {
     super(dbName);
@@ -17,7 +19,9 @@ export class ShopkeeperDatabase extends Dexie {
       transactions: 'id, amount, type, timestamp',
       shops: 'id, name, type, ownerId, createdAt',
       inventoryAudit: 'id, productId, type, timestamp, transactionId',
-      stockAlerts: 'id, productId, type, createdAt'
+      stockAlerts: 'id, productId, type, createdAt',
+      notifications: 'id, type, priority, timestamp, expiresAt',
+      bulkOperations: 'id, type, timestamp, userId'
     });
 
     // Add hooks for automatic timestamp updates
@@ -48,6 +52,18 @@ export class ShopkeeperDatabase extends Dexie {
 
     this.stockAlerts.hook('creating', function (primKey, obj, trans) {
       obj.createdAt = new Date();
+    });
+
+    this.notifications.hook('creating', function (primKey, obj, trans) {
+      if (!obj.timestamp) {
+        obj.timestamp = new Date();
+      }
+    });
+
+    this.bulkOperations.hook('creating', function (primKey, obj, trans) {
+      if (!obj.timestamp) {
+        obj.timestamp = new Date();
+      }
     });
 
     // Add validation hooks

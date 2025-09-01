@@ -133,4 +133,88 @@ export interface InventoryAdjustment {
   reason: string;
   type: 'adjustment' | 'restock' | 'damage' | 'expiry';
   expiryDate?: Date | null; // Optional expiry date update
+  reasonCode?: string; // Standardized reason code
+  batchId?: string; // For bulk operations
+}
+
+export interface BulkInventoryOperation {
+  id: string;
+  type: 'bulk_adjustment' | 'bulk_restock' | 'bulk_expiry_update';
+  adjustments: InventoryAdjustment[];
+  timestamp: Date;
+  userId?: string;
+  notes?: string;
+}
+
+export interface InventoryAnalytics {
+  totalValue: number;
+  totalProducts: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  expiringCount: number;
+  expiredCount: number;
+  stockMovement: StockMovementData[];
+  topMovingProducts: ProductMovement[];
+  categoryBreakdown: CategoryAnalytics[];
+}
+
+export interface StockMovementData {
+  date: Date;
+  totalIn: number;
+  totalOut: number;
+  netChange: number;
+}
+
+export interface ProductMovement {
+  productId: string;
+  productName: string;
+  totalMovement: number;
+  direction: 'in' | 'out';
+  frequency: number;
+}
+
+export interface CategoryAnalytics {
+  category: string;
+  totalProducts: number;
+  totalValue: number;
+  lowStockCount: number;
+  averageStock: number;
+}
+
+export interface ExpiryAlert {
+  id: string;
+  productId: string;
+  productName: string;
+  expiryDate: Date;
+  daysUntilExpiry: number;
+  currentStock: number;
+  severity: 'warning' | 'critical' | 'expired';
+  estimatedLoss?: number; // Estimated financial loss
+}
+
+export interface Notification {
+  id?: string;
+  type: 'low_stock' | 'expiry_warning' | 'expired' | 'transaction' | 'reorder' | 'out_of_stock';
+  title: string;
+  message: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  timestamp: Date;
+  read: boolean;
+  actionable: boolean;
+  data?: any; // Additional context data (productId, transactionId, etc.)
+  expiresAt?: Date; // Optional expiration for temporary notifications
+}
+
+export interface NotificationFilters {
+  type?: Notification['type'];
+  priority?: Notification['priority'];
+  read?: boolean;
+  dateRange?: { start: Date; end: Date };
+}
+
+export interface NotificationStats {
+  total: number;
+  unread: number;
+  byPriority: Record<Notification['priority'], number>;
+  byType: Record<Notification['type'], number>;
 }

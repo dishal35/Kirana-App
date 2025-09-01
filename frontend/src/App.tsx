@@ -76,10 +76,10 @@ const AppContent: React.FC = () => {
 
     transactionServiceRef.current = service;
 
-    // Auto-start listening if not in chat mode
-    if (state.currentPage !== 'chat') {
-      service.startListening().catch(console.error);
-    }
+    // Auto-start listening disabled - user will manually click to speak
+    // if (state.currentPage !== 'chat') {
+    //   service.startListening().catch(console.error);
+    // }
 
     return () => {
       service.destroy();
@@ -95,10 +95,12 @@ const AppContent: React.FC = () => {
     if (state.currentPage === 'chat') {
       // Stop listening when in chat mode to avoid conflicts
       service.stopListening();
-    } else if (!service.isListening()) {
-      // Start listening when not in chat mode
-      service.startListening().catch(console.error);
     }
+    // Auto-start listening disabled - user will manually click to speak
+    // else if (!service.isListening()) {
+    //   // Start listening when not in chat mode
+    //   service.startListening().catch(console.error);
+    // }
   }, [state.currentPage]);
 
   // Handle transaction confirmation

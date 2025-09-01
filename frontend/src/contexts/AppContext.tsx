@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
-import type { Shop, Product, Transaction, TransactionResult } from '../types';
+import type { Shop, Product, Transaction, TransactionResult, Notification } from '../types';
 import { shopRepository, productRepository, transactionRepository } from '../dbs/repo';
+import { notificationService } from '../services/NotificationService';
 
 // Application State Interface
 interface AppState {
@@ -15,6 +16,8 @@ interface AppState {
   // Data
   products: Product[];
   todaysTransactions: Transaction[];
+  notifications: Notification[];
+  unreadNotificationCount: number;
   
   // Audio Processing
   isListening: boolean;
@@ -45,6 +48,9 @@ type AppAction =
   | { type: 'UPDATE_PRODUCT'; product: Product }
   | { type: 'SET_TODAYS_TRANSACTIONS'; transactions: Transaction[] }
   | { type: 'ADD_TRANSACTION'; transaction: Transaction }
+  | { type: 'SET_NOTIFICATIONS'; notifications: Notification[] }
+  | { type: 'SET_UNREAD_COUNT'; count: number }
+  | { type: 'MARK_NOTIFICATION_READ'; notificationId: string }
   | { type: 'SET_LISTENING'; listening: boolean }
   | { type: 'SET_PROCESSING_AUDIO'; processing: boolean }
   | { type: 'SET_PENDING_TRANSACTION'; transaction: TransactionResult | null }
@@ -62,6 +68,8 @@ const initialState: AppState = {
   currentPage: 'dashboard',
   products: [],
   todaysTransactions: [],
+  notifications: [],
+  unreadNotificationCount: 0,
   isListening: false,
   isProcessingAudio: false,
   pendingTransaction: null,
@@ -113,6 +121,21 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         todaysTransactions: [...state.todaysTransactions, action.transaction] 
       };
     
+    case 'SET_NOTIFICATIONS':
+      return { ...state, notifications: action.notifications };
+    
+    case 'SET_UNREAD_COUNT':
+      return { ...state, unreadNotificationCount: action.count };
+    
+    case 'MARK_NOTIFICATION_READ':
+      return {
+        ...state,
+        notifications: state.notifications.map(n => 
+          n.id === action.notificationId ? { ...n, read: true } : n
+        ),
+        unreadNotificationCount: Math.max(0, state.unreadNotificationCount - 1)
+      };
+    
     case 'SET_LISTENING':
       return { ...state, isListening: action.listening };
     
@@ -159,6 +182,12 @@ interface AppContextType {
   confirmTransaction: (productSelections: { productId: string; quantity: number }[]) => Promise<void>;
   startListening: () => void;
   stopListening: () => void;
+  
+  // Notification actions
+  markNotificationAsRead: (notificationId: string) => Promise<void>;
+  markAllNotificationsAsRead: () => Promise<void>;
+  clearAllNotifications: () => Promise<void>;
+  refreshNotifications: () => Promise<void>;
 }
 
 // Create Context
@@ -171,6 +200,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Initialize app on mount
   useEffect(() => {
     initializeApp();
+  }, []);
+
+  // Setup notification listener
+  useEffect(() => {
+    const unsubscribe = notificationService.addListener((notifications) => {
+      dispatch({ type: 'SET_NOTIFICATIONS', notifications });
+      const unreadCount = notifications.filter(n => !n.read).length;
+      dispatch({ type: 'SET_UNREAD_COUNT', count: unreadCount });
+    });
+
+    // Load initial notifications
+    refreshNotifications();
+
+    return unsubscribe;
   }, []);
 
   // Initialize application
@@ -334,6 +377,51 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     dispatch({ type: 'SET_LISTENING', listening: false });
   };
 
+  // Notification actions
+  const markNotificationAsRead = async (notificationId: string) => {
+    try {
+      await notificationService.markAsRead(notificationId);
+      dispatch({ type: 'MARK_NOTIFICATION_READ', notificationId });
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+      dispatch({ type: 'SET_ERROR', error: 'Failed to mark notification as read' });
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    try {
+      await notificationService.markAllAsRead();
+      // Notifications will be updated via the listener
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+      dispatch({ type: 'SET_ERROR', error: 'Failed to mark all notifications as read' });
+    }
+  };
+
+  const clearAllNotifications = async () => {
+    try {
+      await notificationService.clearAll();
+      // Notifications will be updated via the listener
+    } catch (error) {
+      console.error('Failed to clear all notifications:', error);
+      dispatch({ type: 'SET_ERROR', error: 'Failed to clear notifications' });
+    }
+  };
+
+  const refreshNotifications = async () => {
+    try {
+      const [notifications, unreadCount] = await Promise.all([
+        notificationService.getNotifications(),
+        notificationService.getUnreadCount()
+      ]);
+      dispatch({ type: 'SET_NOTIFICATIONS', notifications });
+      dispatch({ type: 'SET_UNREAD_COUNT', count: unreadCount });
+    } catch (error) {
+      console.error('Failed to refresh notifications:', error);
+      dispatch({ type: 'SET_ERROR', error: 'Failed to load notifications' });
+    }
+  };
+
   const contextValue: AppContextType = {
     state,
     dispatch,
@@ -345,6 +433,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     confirmTransaction,
     startListening,
     stopListening,
+    markNotificationAsRead,
+    markAllNotificationsAsRead,
+    clearAllNotifications,
+    refreshNotifications,
   };
 
   return (
