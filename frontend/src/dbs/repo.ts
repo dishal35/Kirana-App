@@ -2,10 +2,16 @@ import { db } from './db';
 import type { Product, Transaction, Shop, InventoryAuditEntry, StockAlert } from '../types';
 
 export class ProductRepository {
-  async create(product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    const productWithId = { ...product, id: crypto.randomUUID() } as Product;
-    const id = await db.products.add(productWithId);
-    return id.toString();
+  async create(product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<Product> {
+    const now = new Date();
+    const productWithId = { 
+      ...product, 
+      id: crypto.randomUUID(),
+      createdAt: now,
+      updatedAt: now
+    } as Product;
+    await db.products.add(productWithId);
+    return productWithId;
   }
 
   async getAll(): Promise<Product[]> {
@@ -16,8 +22,14 @@ export class ProductRepository {
     return await db.products.get(id);
   }
 
-  async update(id: string, updates: Partial<Product>): Promise<void> {
-    await db.products.update(id, updates);
+  async update(product: Product): Promise<Product> {
+    const updatedProduct = { ...product, updatedAt: new Date() };
+    await db.products.update(product.id!, updatedProduct);
+    return updatedProduct;
+  }
+
+  async updateById(id: string, updates: Partial<Product>): Promise<void> {
+    await db.products.update(id, { ...updates, updatedAt: new Date() });
   }
 
   async delete(id: string): Promise<void> {
@@ -25,10 +37,11 @@ export class ProductRepository {
   }
 
   async getLowStockProducts(threshold?: number): Promise<Product[]> {
-    if (threshold) {
-      return await db.products.where('stock').belowOrEqual(threshold).toArray();
-    }
-    return await db.products.where('stock').belowOrEqual('reorderThreshold').toArray();
+    const allProducts = await db.products.toArray();
+    return allProducts.filter(product => {
+      const effectiveThreshold = threshold ?? product.reorderThreshold;
+      return product.stock <= effectiveThreshold;
+    });
   }
 
   async updateStock(id: string, newStock: number): Promise<void> {
@@ -37,10 +50,10 @@ export class ProductRepository {
 }
 
 export class TransactionRepository {
-  async create(transaction: Omit<Transaction, 'id'>): Promise<string> {
+  async create(transaction: Omit<Transaction, 'id'>): Promise<Transaction> {
     const transactionWithId = { ...transaction, id: crypto.randomUUID() } as Transaction;
-    const id = await db.transactions.add(transactionWithId);
-    return id.toString();
+    await db.transactions.add(transactionWithId);
+    return transactionWithId;
   }
 
   async getAll(): Promise<Transaction[]> {
@@ -77,10 +90,14 @@ export class TransactionRepository {
 }
 
 export class ShopRepository {
-  async create(shop: Omit<Shop, 'id' | 'createdAt'>): Promise<string> {
-    const shopWithId = { ...shop, id: crypto.randomUUID() } as Shop;
-    const id = await db.shops.add(shopWithId);
-    return id.toString();
+  async create(shop: Omit<Shop, 'id' | 'createdAt'>): Promise<Shop> {
+    const shopWithId = { 
+      ...shop, 
+      id: crypto.randomUUID(),
+      createdAt: new Date()
+    } as Shop;
+    await db.shops.add(shopWithId);
+    return shopWithId;
   }
 
   async getAll(): Promise<Shop[]> {

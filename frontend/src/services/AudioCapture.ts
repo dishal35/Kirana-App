@@ -7,7 +7,10 @@
  * - Audio quality validation and noise filtering
  * - Temporary storage management for audio blobs
  * - User-friendly permission handling
+ * - Memory optimization for 8GB RAM systems
  */
+
+import { memoryManager } from '../utils/MemoryManager';
 
 export interface AudioQualityMetrics {
   volume: number;
@@ -48,7 +51,7 @@ class AudioCaptureServiceImpl implements AudioCaptureService {
   
   // Temporary storage for audio blobs
   private temporaryStorage: Map<string, { blob: Blob; timestamp: number; quality: AudioQualityMetrics }> = new Map();
-  private storageCleanupInterval: NodeJS.Timeout | null = null;
+  private storageCleanupInterval: number | null = null;
   
   // Voice Activity Detection state
   private vadBuffer: Float32Array[] = [];
@@ -69,15 +72,20 @@ class AudioCaptureServiceImpl implements AudioCaptureService {
       vadThreshold: config.vadThreshold ?? 0.01,
       noiseThreshold: config.noiseThreshold ?? 0.005,
       minRecordingDuration: config.minRecordingDuration ?? 1000, // 1 second
-      maxRecordingDuration: config.maxRecordingDuration ?? 10000, // 10 seconds
-      sampleRate: config.sampleRate ?? 44100,
+      maxRecordingDuration: config.maxRecordingDuration ?? 8000, // Reduced to 8 seconds for memory optimization
+      sampleRate: config.sampleRate ?? 22050, // Reduced sample rate for memory efficiency
       enableNoiseFiltering: config.enableNoiseFiltering ?? true
     };
 
-    // Start cleanup interval for temporary storage (clean every 5 minutes)
+    // Start cleanup interval for temporary storage (clean every 3 minutes for better memory management)
     this.storageCleanupInterval = setInterval(() => {
       this.cleanupExpiredAudio();
-    }, 5 * 60 * 1000);
+    }, 3 * 60 * 1000);
+
+    // Register memory pressure cleanup
+    memoryManager.onMemoryPressure(() => {
+      this.handleMemoryPressure();
+    });
   }
 
   async startListening(): Promise<void> {
@@ -273,15 +281,23 @@ class AudioCaptureServiceImpl implements AudioCaptureService {
     const audioBlob = new Blob(this.audioChunks, { type: this.mediaRecorder?.mimeType || 'audio/webm' });
     this.audioChunks = [];
 
-    // Analyze audio quality
-    const quality = await this.getAudioQuality(audioBlob);
-    
-    if (quality.isAcceptable) {
-      // Store temporarily and notify
-      this.storeAudioTemporarily(audioBlob, quality);
-      this.onAudioDetected(audioBlob, quality);
-    } else {
-      this.onQualityIssue("Audio quality too low for processing", quality);
+    try {
+      // Optimize audio blob for memory efficiency
+      const optimizedBlob = await memoryManager.optimizeAudioBlob(audioBlob);
+      
+      // Analyze audio quality
+      const quality = await this.getAudioQuality(optimizedBlob);
+      
+      if (quality.isAcceptable) {
+        // Store temporarily and notify
+        this.storeAudioTemporarily(optimizedBlob, quality);
+        this.onAudioDetected(optimizedBlob, quality);
+      } else {
+        this.onQualityIssue("Audio quality too low for processing", quality);
+      }
+    } catch (error) {
+      console.error("Error processing audio:", error);
+      this.onQualityIssue("Failed to process audio", { volume: 0, noiseLevel: 1, clarity: 0, isAcceptable: false });
     }
 
     // Reset timing
@@ -379,21 +395,46 @@ class AudioCaptureServiceImpl implements AudioCaptureService {
       quality
     });
 
-    // Limit storage to prevent memory issues
-    if (this.temporaryStorage.size > 50) {
-      const oldestKey = Array.from(this.temporaryStorage.keys())[0];
-      this.temporaryStorage.delete(oldestKey);
+    // Reduced storage limit for better memory management on 8GB systems
+    const maxStorage = 20;
+    if (this.temporaryStorage.size > maxStorage) {
+      // Remove oldest entries
+      const sortedEntries = Array.from(this.temporaryStorage.entries())
+        .sort(([, a], [, b]) => a.timestamp - b.timestamp);
+      
+      const entriesToRemove = this.temporaryStorage.size - maxStorage;
+      for (let i = 0; i < entriesToRemove; i++) {
+        this.temporaryStorage.delete(sortedEntries[i][0]);
+      }
     }
   }
 
   private cleanupExpiredAudio(): void {
     const now = Date.now();
-    const maxAge = 30 * 60 * 1000; // 30 minutes
+    const maxAge = 15 * 60 * 1000; // Reduced to 15 minutes for better memory management
 
     for (const [key, value] of this.temporaryStorage.entries()) {
       if (now - value.timestamp > maxAge) {
         this.temporaryStorage.delete(key);
       }
+    }
+  }
+
+  /**
+   * Handle memory pressure by aggressively cleaning up audio storage
+   */
+  private handleMemoryPressure(): void {
+    console.log("Audio service handling memory pressure");
+    
+    // Clear all temporary storage
+    this.temporaryStorage.clear();
+    
+    // Clear VAD buffer
+    this.vadBuffer = [];
+    
+    // Clear audio chunks if not currently recording
+    if (this.mediaRecorder?.state !== 'recording') {
+      this.audioChunks = [];
     }
   }
 

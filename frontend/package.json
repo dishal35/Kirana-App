@@ -6,12 +6,16 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:analyze": "npm run build && npx vite-bundle-analyzer dist",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "test:performance": "vitest run --reporter=verbose src/__tests__/Performance.test.ts",
+    "perf:memory": "node --expose-gc --max-old-space-size=512 node_modules/vite/bin/vite.js build",
+    "perf:profile": "node --prof node_modules/vite/bin/vite.js build"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

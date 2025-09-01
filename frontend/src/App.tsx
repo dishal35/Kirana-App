@@ -1,183 +1,201 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { AppProvider, useApp } from './contexts/AppContext';
 import { OnboardingProvider } from './contexts/OnboardingContext';
-import { OnboardingWizard } from './components/onboarding/OnboardingWizard';
-import { shopRepository } from './dbs/repo';
-import AudioRecorderComponent from './components/AudioRecorderComponent';
-import SimpleAmountTest from './examples/SimpleAmountTest';
-import SimpleVoiceDemo from './examples/SimpleVoiceDemo';
-import RealTimeVoiceDemo from './examples/RealTimeVoiceDemo';
-import ProductSuggestionExample from './examples/ProductSuggestionExample';
-import { TransactionConfirmationExample } from './examples/TransactionConfirmationExample';
-import { BusinessDashboardExample } from './examples/BusinessDashboardExample';
-import { DebugInfo } from './components/DebugInfo';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { PageLoader } from './components/LoadingSpinner';
+import { Navigation, MobileNavigation } from './components/Navigation';
+import { 
+  OnboardingWizard,
+  BusinessDashboard,
+  ChatPage,
+  InventoryPage,
+  TransactionPage,
+  TransactionConfirmationModal,
+  DemoPage
+} from './components/LazyComponents';
+import PerformanceMonitor from './components/PerformanceMonitor';
+import DemoModeIndicator from './components/demo/DemoModeIndicator';
+import { IntegratedTransactionService } from './services/IntegratedTransactionService';
+import { memoryManager } from './utils/MemoryManager';
+import type { TransactionResult } from './types';
 import './utils/debugAudio'; // Load debug utilities
 import './utils/initDemoData'; // Load demo data utility
 import './utils/testDatabase'; // Load database test utility
+import './utils/demoUtils'; // Load demo utilities
 
-function App() {
-  //sets the state for first time users by checking if the shop repository is empty
-  const [isFirstTime, setIsFirstTime] = useState<boolean | null>(null);
-  const [currentView, setCurrentView] = useState<'main' | 'amount-extraction' | 'voice-demo' | 'real-voice' | 'product-suggestions' | 'transaction-confirmation' | 'dashboard'>('main');
+// Main App Content Component
+const AppContent: React.FC = () => {
+  const { 
+    state, 
+    processTransaction, 
+    confirmTransaction, 
+    startListening, 
+    stopListening,
+    dispatch 
+  } = useApp();
+  
+  const transactionServiceRef = useRef<IntegratedTransactionService | null>(null);
 
+  // Initialize integrated transaction service
   useEffect(() => {
-    const checkFirstTimeUser = async () => {
-      try {
-        console.log('App: Starting first time user check...');
-        const shops = await shopRepository.getAll();
-        console.log('App: Shops found:', shops.length);
-        console.log('App: Setting isFirstTime to:', shops.length === 0);
-        setIsFirstTime(shops.length === 0);
-      } catch (error) {
-        console.error('App: Error checking first time user:', error);
-        console.log('App: Setting isFirstTime to false due to error');
-        setIsFirstTime(false); // Default to not first time on error
-      }
+    if (!state.isInitialized || state.isFirstTime) {
+      return;
+    }
+
+    const service = new IntegratedTransactionService({
+      onTransactionDetected: (result: TransactionResult) => {
+        console.log('Transaction detected:', result);
+        processTransaction(result);
+      },
+      onError: (error: string) => {
+        console.error('Transaction service error:', error);
+        dispatch({ type: 'SET_ERROR', error });
+      },
+      onStatusChange: (status) => {
+        dispatch({ type: 'SET_LISTENING', listening: status === 'listening' });
+        dispatch({ type: 'SET_PROCESSING_AUDIO', processing: status === 'processing' });
+      },
+      products: state.products,
+      autoSuggestEnabled: state.autoSuggestEnabled,
+    });
+
+    transactionServiceRef.current = service;
+
+    // Auto-start listening if not in chat mode
+    if (state.currentPage !== 'chat') {
+      service.startListening().catch(console.error);
+    }
+
+    return () => {
+      service.destroy();
+      transactionServiceRef.current = null;
     };
+  }, [state.isInitialized, state.isFirstTime, state.products, state.autoSuggestEnabled]);
 
-    console.log('App: Component mounted, checking first time user...');
-    checkFirstTimeUser();
-  }, []);
+  // Handle page changes for audio service
+  useEffect(() => {
+    const service = transactionServiceRef.current;
+    if (!service) return;
 
-  if (isFirstTime === null) {
-    console.log('App: Rendering loading state (isFirstTime is null)');
+    if (state.currentPage === 'chat') {
+      // Stop listening when in chat mode to avoid conflicts
+      service.stopListening();
+    } else if (!service.isListening()) {
+      // Start listening when not in chat mode
+      service.startListening().catch(console.error);
+    }
+  }, [state.currentPage]);
+
+  // Handle transaction confirmation
+  const handleConfirmTransaction = async (productSelections: { productId: string; quantity: number }[]) => {
+    try {
+      await confirmTransaction(productSelections);
+    } catch (error) {
+      console.error('Failed to confirm transaction:', error);
+    }
+  };
+
+  const handleCancelTransaction = () => {
+    dispatch({ type: 'SET_PENDING_TRANSACTION', transaction: null });
+  };
+
+  // Show loading screen while app initializes
+  if (!state.isInitialized) {
+    return <PageLoader text="Initializing application..." />;
+  }
+
+  // Show onboarding for first-time users
+  if (state.isFirstTime) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-lg">Loading...</div>
-          <div className="text-sm text-gray-500 mt-2">Checking shop setup</div>
-          <div className="text-xs text-gray-400 mt-4">
-            Check browser console for debug information
-          </div>
-        </div>
-      </div>
+      <OnboardingProvider>
+        <OnboardingWizard />
+      </OnboardingProvider>
     );
   }
 
-  console.log('Rendering app, isFirstTime:', isFirstTime, 'currentView:', currentView);
-
-  const renderMainContent = () => {
-    switch (currentView) {
-      case 'amount-extraction':
-        return <SimpleAmountTest />;
-      case 'voice-demo':
-        return <SimpleVoiceDemo />;
-      case 'real-voice':
-        return <RealTimeVoiceDemo />;
-      case 'product-suggestions':
-        return <ProductSuggestionExample />;
-      case 'transaction-confirmation':
-        return <TransactionConfirmationExample />;
+  // Render main application content
+  const renderPageContent = () => {
+    switch (state.currentPage) {
       case 'dashboard':
-        return <BusinessDashboardExample />;
-      case 'main':
+        return <BusinessDashboard />;
+      
+      case 'chat':
+        return <ChatPage />;
+      
+      case 'inventory':
+        return <InventoryPage />;
+      
+      case 'transactions':
+        return <TransactionPage />;
+      
+      case 'demo':
+        return <DemoPage />;
+      
       default:
-        return (
-          <div className="p-4">
-            <h1 className="text-2xl font-bold mb-4">Welcome back to your shop!</h1>
-            <DebugInfo />
-            <div className="mt-4">
-              <AudioRecorderComponent />
-            </div>
-          </div>
-        );
+        return <BusinessDashboard />;
     }
   };
 
   return (
-    //if the user is a first time user, the onboarding wizard is displayed, otherwise the main app content is displayed
     <div className="min-h-screen bg-gray-50">
-      {isFirstTime ? (
-        <OnboardingProvider>
-          <OnboardingWizard />
-        </OnboardingProvider>
-      ) : (
-        <div>
-          {/* Navigation */}
-          <nav className="bg-white shadow-sm border-b">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between h-16">
-                <div className="flex space-x-8">
-                  <button
-                    onClick={() => setCurrentView('main')}
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                      currentView === 'main'
-                        ? 'border-blue-500 text-gray-900'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    🏪 Main App
-                  </button>
-                  <button
-                    onClick={() => setCurrentView('amount-extraction')}
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                      currentView === 'amount-extraction'
-                        ? 'border-blue-500 text-gray-900'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    🔍 Text Demo
-                  </button>
-                  <button
-                    onClick={() => setCurrentView('voice-demo')}
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                      currentView === 'voice-demo'
-                        ? 'border-blue-500 text-gray-900'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    🎤 Voice Demo
-                  </button>
-                  <button
-                    onClick={() => setCurrentView('real-voice')}
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                      currentView === 'real-voice'
-                        ? 'border-blue-500 text-gray-900'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    🎙️ Real Voice
-                  </button>
-                  <button
-                    onClick={() => setCurrentView('product-suggestions')}
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                      currentView === 'product-suggestions'
-                        ? 'border-blue-500 text-gray-900'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    🛍️ Product Suggestions
-                  </button>
-                  <button
-                    onClick={() => setCurrentView('transaction-confirmation')}
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                      currentView === 'transaction-confirmation'
-                        ? 'border-blue-500 text-gray-900'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    💳 Transaction Confirmation
-                  </button>
-                  <button
-                    onClick={() => setCurrentView('dashboard')}
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                      currentView === 'dashboard'
-                        ? 'border-blue-500 text-gray-900'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    📊 Dashboard
-                  </button>
-                </div>
-              </div>
-            </div>
-          </nav>
+      {/* Desktop Navigation */}
+      <div className="hidden md:block">
+        <Navigation />
+      </div>
 
-          {/* Main content */}
-          {renderMainContent()}
+      {/* Main Content */}
+      <main className="pb-16 md:pb-0">
+        {renderPageContent()}
+      </main>
+
+      {/* Mobile Navigation */}
+      <MobileNavigation />
+
+      {/* Transaction Confirmation Modal */}
+      {state.pendingTransaction && (
+        <TransactionConfirmationModal
+          isOpen={true}
+          transactionResult={state.pendingTransaction}
+          products={state.products}
+          onConfirm={handleConfirmTransaction}
+          onCancel={handleCancelTransaction}
+        />
+      )}
+
+      {/* Global Error Display */}
+      {state.error && (
+        <div className="fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-lg z-50">
+          <div className="flex items-center">
+            <span className="mr-2">⚠️</span>
+            <span>{state.error}</span>
+            <button
+              onClick={() => dispatch({ type: 'SET_ERROR', error: null })}
+              className="ml-4 text-red-500 hover:text-red-700"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
+
+      {/* Performance Monitor */}
+      <PerformanceMonitor />
+
+      {/* Demo Mode Indicator */}
+      <DemoModeIndicator />
     </div>
-  )
+  );
+};
+
+// Root App Component with Providers
+function App() {
+  return (
+    <ErrorBoundary>
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
+    </ErrorBoundary>
+  );
 }
 
 export default App
