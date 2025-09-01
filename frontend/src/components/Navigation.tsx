@@ -1,5 +1,7 @@
 import React from 'react';
 import { useApp } from '../contexts/AppContext';
+import { AccountSwitcher } from './auth/AccountSwitcher';
+import { DateNavigator } from './common/DateNavigator';
 
 interface NavigationProps {
   className?: string;
@@ -136,6 +138,9 @@ export const Navigation: React.FC<NavigationProps> = ({ className = '' }) => {
               <option value="hi">हिंदी</option>
               <option value="kn">ಕನ್ನಡ</option>
             </select>
+
+            {/* Account Switcher */}
+            <AccountSwitcher />
           </div>
         </div>
       </div>

@@ -60,6 +60,13 @@ export class InventoryManager {
     // Update product stock
     await productRepository.updateStock(adjustment.productId, newStock);
 
+    // Update expiry date if provided
+    if (adjustment.expiryDate !== undefined) {
+      await productRepository.updateById(adjustment.productId, {
+        expiryDate: adjustment.expiryDate
+      });
+    }
+
     // Create audit entry
     await this.createAuditEntry({
       productId: adjustment.productId,

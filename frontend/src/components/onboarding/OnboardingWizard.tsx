@@ -82,7 +82,9 @@ export const OnboardingWizard: React.FC = () => {
       setIsLoading(true);
       setLoadingMessage('Setting up demo shop...');
       
-      await DemoDataService.initializeDemoShop();
+      // Use SimpleDemoService for basic demo data
+      const { SimpleDemoService } = await import('../../services/SimpleDemoService');
+      await SimpleDemoService.initializeSimpleDemoShop();
       
       setLoadingMessage('Demo setup complete!');
       await new Promise(resolve => setTimeout(resolve, 500));

@@ -9,7 +9,8 @@ export const ProductCatalogForm: React.FC = () => {
     price: '',
     stock: '',
     category: '',
-    imageUrl: ''
+    imageUrl: '',
+    expiryDate: ''
   });
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -48,7 +49,8 @@ export const ProductCatalogForm: React.FC = () => {
       ...currentProduct,
       price: Number(currentProduct.price),
       stock: Number(currentProduct.stock),
-      reorderThreshold: 5 // Default value
+      reorderThreshold: 5, // Default value
+      expiryDate: currentProduct.expiryDate ? new Date(currentProduct.expiryDate) : undefined
     };
 
     const validation = validateProduct(productToValidate);
@@ -69,7 +71,8 @@ export const ProductCatalogForm: React.FC = () => {
       price: '',
       stock: '',
       category: '',
-      imageUrl: ''
+      imageUrl: '',
+      expiryDate: ''
     });
     setErrors([]);
   };
@@ -112,6 +115,11 @@ export const ProductCatalogForm: React.FC = () => {
                   <div>
                     <p className="font-semibold text-lg text-gray-900 group-hover:text-indigo-600 transition-colors">{product.name}</p>
                     <p className="text-sm text-gray-500 group-hover:text-indigo-400 transition-colors">{product.category}</p>
+                    {product.expiryDate && (
+                      <p className="text-xs text-orange-600">
+                        Expires: {product.expiryDate.toLocaleDateString('en-IN')}
+                      </p>
+                    )}
                   </div>
                   <div className="text-right">
                     <div className="text-base font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">₹{product.price}</div>
@@ -221,6 +229,20 @@ export const ProductCatalogForm: React.FC = () => {
               onChange={handleInputChange}
               min="0"
               placeholder="0"
+              className="block w-full rounded-xl border-2 bg-white/50 py-3 px-4 text-base placeholder:text-gray-400 focus:outline-none focus:ring-0 border-gray-100 focus:border-indigo-400 hover:border-indigo-200 transition-all duration-200 group-hover:shadow-md"
+            />
+          </div>
+
+          <div className="group">
+            <label htmlFor="expiryDate" className="block text-sm font-semibold text-gray-700 mb-2 group-hover:text-indigo-600 transition-colors">
+              Expiry Date (Optional)
+            </label>
+            <input
+              type="date"
+              id="expiryDate"
+              name="expiryDate"
+              value={currentProduct.expiryDate}
+              onChange={handleInputChange}
               className="block w-full rounded-xl border-2 bg-white/50 py-3 px-4 text-base placeholder:text-gray-400 focus:outline-none focus:ring-0 border-gray-100 focus:border-indigo-400 hover:border-indigo-200 transition-all duration-200 group-hover:shadow-md"
             />
           </div>

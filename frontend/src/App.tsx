@@ -1,9 +1,13 @@
 import React, { useEffect, useRef } from 'react';
+import { BrowserRouter as Router } from 'react-router-dom';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { OnboardingProvider } from './contexts/OnboardingContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { DateProvider } from './contexts/DateContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageLoader } from './components/LoadingSpinner';
 import { Navigation, MobileNavigation } from './components/Navigation';
+import { LoginPage } from './components/auth/LoginPage';
 import { 
   OnboardingWizard,
   BusinessDashboard,
@@ -16,21 +20,32 @@ import {
 import PerformanceMonitor from './components/PerformanceMonitor';
 import DemoModeIndicator from './components/demo/DemoModeIndicator';
 import { IntegratedTransactionService } from './services/IntegratedTransactionService';
-import { memoryManager } from './utils/MemoryManager';
 import type { TransactionResult } from './types';
 import './utils/debugAudio'; // Load debug utilities
 import './utils/initDemoData'; // Load demo data utility
 import './utils/testDatabase'; // Load database test utility
 import './utils/demoUtils'; // Load demo utilities
+import './utils/testUtils'; // Load testing utilities
+import './utils/appVerification'; // Load app verification
+import './utils/setupDemo'; // Load demo setup utilities
+
+// Authentication Wrapper Component
+const AuthenticatedApp: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
+
+  return <AppContent />;
+};
 
 // Main App Content Component
 const AppContent: React.FC = () => {
   const { 
     state, 
     processTransaction, 
-    confirmTransaction, 
-    startListening, 
-    stopListening,
+    confirmTransaction,
     dispatch 
   } = useApp();
   
@@ -191,9 +206,15 @@ const AppContent: React.FC = () => {
 function App() {
   return (
     <ErrorBoundary>
-      <AppProvider>
-        <AppContent />
-      </AppProvider>
+      <Router>
+        <AuthProvider>
+          <DateProvider>
+            <AppProvider>
+              <AuthenticatedApp />
+            </AppProvider>
+          </DateProvider>
+        </AuthProvider>
+      </Router>
     </ErrorBoundary>
   );
 }

@@ -17,6 +17,9 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
   const [adjustmentType, setAdjustmentType] = useState<'adjustment' | 'restock' | 'damage' | 'expiry'>('adjustment');
   const [quantityChange, setQuantityChange] = useState<string>('');
   const [reason, setReason] = useState('');
+  const [expiryDate, setExpiryDate] = useState<string>(
+    product.expiryDate ? product.expiryDate.toISOString().split('T')[0] : ''
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,13 +50,15 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
         productId: product.id!,
         quantityChange: quantity,
         reason: reason.trim(),
-        type: adjustmentType
+        type: adjustmentType,
+        expiryDate: expiryDate ? new Date(expiryDate) : null
       });
       
       // Reset form
       setQuantityChange('');
       setReason('');
       setAdjustmentType('adjustment');
+      setExpiryDate(product.expiryDate ? product.expiryDate.toISOString().split('T')[0] : '');
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to adjust stock');
@@ -102,6 +107,11 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
           <h3 className="font-medium">{product.name}</h3>
           <p className="text-sm text-gray-600">Current Stock: {product.stock}</p>
           <p className="text-sm text-gray-600">Reorder Threshold: {product.reorderThreshold}</p>
+          {product.expiryDate && (
+            <p className="text-sm text-gray-600">
+              Current Expiry: {product.expiryDate.toLocaleDateString('en-IN')}
+            </p>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -146,6 +156,22 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
             </div>
             <p className="text-xs text-gray-500 mt-1">
               Use positive numbers to add stock, negative to reduce
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Expiry Date (Optional)
+            </label>
+            <input
+              type="date"
+              value={expiryDate}
+              onChange={(e) => setExpiryDate(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={isSubmitting}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Leave empty to remove expiry date, or set a new expiry date
             </p>
           </div>
 

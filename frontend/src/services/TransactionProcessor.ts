@@ -33,8 +33,10 @@ export class TransactionProcessor {
       const extractionResult = this.amountExtractor.extractAmount(transcriptionResult.text);
       
       // Step 3: Validate extraction meets confidence threshold
-      if (!this.amountExtractor.validateExtraction(extractionResult, 0.5)) {
-        throw new Error('Amount extraction failed validation');
+      if (!this.amountExtractor.validateExtraction(extractionResult, 0.3)) {
+        // If no UPI pattern found, this might not be a payment alert
+        console.log('No UPI payment detected in audio:', transcriptionResult.text);
+        throw new Error('No UPI payment detected in audio');
       }
 
       return {

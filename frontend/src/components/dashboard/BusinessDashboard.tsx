@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { dashboardService, type DashboardMetrics } from '../../services/DashboardService';
+import { SimpleDemoService } from '../../services/SimpleDemoService';
+import { productRepository } from '../../dbs/repo';
+import { DateNavigator } from '../common/DateNavigator';
+import { ClickToSpeakAudio } from '../audio/ClickToSpeakAudio';
+import { useDate } from '../../contexts/DateContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Icon components for better visual design
 const SalesIcon = () => (
@@ -27,7 +33,10 @@ const TrendIcon = () => (
 );
 
 export const BusinessDashboard: React.FC = () => {
+  const { selectedDate } = useDate();
+  const { user } = useAuth();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [dailySummary, setDailySummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
@@ -36,8 +45,22 @@ export const BusinessDashboard: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      
+      // Load general metrics
       const data = await dashboardService.getAllMetrics();
       setMetrics(data);
+      
+      // Load date-specific transactions if using demo account
+      if (user?.type === 'demo') {
+        const transactions = await SimpleDemoService.getTransactionsForDate(selectedDate);
+        setDailySummary({
+          totalSales: transactions.reduce((sum, t) => sum + t.amount, 0),
+          totalTransactions: transactions.length,
+          upiTransactions: transactions.filter(t => t.type === 'upi').length,
+          cashTransactions: transactions.filter(t => t.type === 'cash').length
+        });
+      }
+      
       setLastUpdated(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load dashboard metrics');
@@ -45,6 +68,10 @@ export const BusinessDashboard: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadMetrics();
+  }, [selectedDate, user?.type]); // Reload when date or user changes
 
   useEffect(() => {
     loadMetrics();
@@ -102,7 +129,7 @@ export const BusinessDashboard: React.FC = () => {
   if (!metrics) return null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -116,6 +143,44 @@ export const BusinessDashboard: React.FC = () => {
         >
           {loading ? 'Refreshing...' : 'Refresh'}
         </button>
+      </div>
+
+      {/* Date Navigator */}
+      <DateNavigator />
+
+      {/* Click to Speak Audio */}
+      <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg p-6 border border-indigo-50">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">🎤 Voice Transaction Entry</h3>
+        <ClickToSpeakAudio 
+          onTransactionDetected={async (result) => {
+            console.log('Transaction detected:', result);
+            
+            // For demo purposes, create a simple transaction
+            if (user?.type === 'demo' && result.amount > 0) {
+              try {
+                // Get a random product for the transaction
+                const allProducts = await productRepository.getAll();
+                if (allProducts.length > 0) {
+                  const randomProduct = allProducts[Math.floor(Math.random() * allProducts.length)];
+                  
+                  await SimpleDemoService.addManualTransaction(
+                    result.amount,
+                    result.transcription,
+                    [{ productId: randomProduct.id!, quantity: 1 }]
+                  );
+                  
+                  // Refresh the dashboard
+                  loadMetrics();
+                  
+                  alert(`✅ Transaction created: ₹${result.amount} for ${randomProduct.name}`);
+                }
+              } catch (error) {
+                console.error('Failed to create transaction:', error);
+                alert('Failed to create transaction. Please try again.');
+              }
+            }
+          }}
+        />
       </div>
 
       {/* Key Metrics Cards */}

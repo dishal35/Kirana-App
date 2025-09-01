@@ -132,4 +132,5 @@ export interface InventoryAdjustment {
   quantityChange: number;
   reason: string;
   type: 'adjustment' | 'restock' | 'damage' | 'expiry';
+  expiryDate?: Date | null; // Optional expiry date update
 }

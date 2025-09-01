@@ -63,26 +63,32 @@ export class IntegratedTransactionService {
       if (transactionResult.amount > 0) {
         // Get product suggestions if enabled
         if (this.config.autoSuggestEnabled) {
-          const suggestions = await this.productSuggestionService.suggestProducts(
+          const suggestions = await this.productSuggestionService.getSuggestions(
             transactionResult.amount,
-            this.config.products,
-            [] // Transaction history would be passed here
+            3 // Max suggestions
           );
           
-          transactionResult.suggestedProducts = suggestions;
+          // Convert ProductSuggestion[] to Product[]
+          transactionResult.suggestedProducts = suggestions.map(s => s.product);
         }
 
         // Notify the application about the detected transaction
         this.config.onTransactionDetected(transactionResult);
       }
 
-      this.setStatus('idle');
+      this.setStatus('listening'); // Return to listening state
     } catch (error) {
-      console.error('Error processing audio transaction:', error);
-      this.setStatus('error');
-      this.config.onError(
-        error instanceof Error ? error.message : 'Failed to process audio transaction'
-      );
+      // Don't treat non-UPI audio as an error, just log it
+      if (error instanceof Error && error.message.includes('No UPI payment detected')) {
+        console.log('Audio processed but no UPI payment found - continuing to listen');
+        this.setStatus('listening');
+      } else {
+        console.error('Error processing audio transaction:', error);
+        this.setStatus('error');
+        this.config.onError(
+          error instanceof Error ? error.message : 'Failed to process audio transaction'
+        );
+      }
     }
   }
 
