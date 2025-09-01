@@ -1,5 +1,5 @@
 import { DemoDataService } from './DemoDataService';
-import { sampleUPIAlerts, createMockAudioBlob } from '../test/fixtures/sampleAudio';
+import { createRealisticAudioBlob } from '../utils/audioUtils';
 import { productRepository, transactionRepository } from '../dbs/repo';
 import type { Product, Transaction } from '../types';
 
@@ -63,7 +63,7 @@ export class HackathonDemoService {
         id: 'scenario_1',
         name: 'Tea Purchase - ₹20',
         description: 'Customer buys tea packet for ₹20 via PhonePe',
-        audioBlob: createMockAudioBlob('You have received twenty rupees on PhonePe from customer'),
+        audioBlob: createRealisticAudioBlob('You have received twenty rupees on PhonePe from customer', 3000),
         expectedAmount: 20,
         expectedTranscription: 'You have received ₹20 on PhonePe from customer',
         suggestedProducts: ['Tea (250g)'],
@@ -73,7 +73,7 @@ export class HackathonDemoService {
         id: 'scenario_2',
         name: 'Snack Combo - ₹45',
         description: 'Customer buys biscuits and chips for ₹45 via GPay',
-        audioBlob: createMockAudioBlob('Payment of forty five rupees received via Google Pay'),
+        audioBlob: createRealisticAudioBlob('Payment of forty five rupees received via Google Pay', 4000),
         expectedAmount: 45,
         expectedTranscription: 'Payment of ₹45 received via Google Pay',
         suggestedProducts: ['Parle-G Biscuits', 'Chips (50g)', 'Chocolate Bar'],
@@ -83,7 +83,7 @@ export class HackathonDemoService {
         id: 'scenario_3',
         name: 'Rice Purchase - ₹90',
         description: 'Customer buys 2kg rice for ₹90 via UPI',
-        audioBlob: createMockAudioBlob('UPI payment ninety rupees received successfully'),
+        audioBlob: createRealisticAudioBlob('UPI payment ninety rupees received successfully', 3000),
         expectedAmount: 90,
         expectedTranscription: 'UPI payment ₹90 received successfully',
         suggestedProducts: ['Rice (1kg)'],
@@ -93,7 +93,7 @@ export class HackathonDemoService {
         id: 'scenario_4',
         name: 'Mixed Items - ₹155',
         description: 'Customer buys oil, salt, and soap for ₹155',
-        audioBlob: createMockAudioBlob('Paytm payment one hundred fifty five rupees received'),
+        audioBlob: createRealisticAudioBlob('Paytm payment one hundred fifty five rupees received', 5000),
         expectedAmount: 155,
         expectedTranscription: 'Paytm payment ₹155 received',
         suggestedProducts: ['Cooking Oil (1L)', 'Salt (1kg)', 'Soap Bar'],
@@ -103,7 +103,7 @@ export class HackathonDemoService {
         id: 'scenario_5',
         name: 'Hindi Alert - ₹35',
         description: 'Hindi UPI alert for wheat flour purchase',
-        audioBlob: createMockAudioBlob('आपको पैंतीस रुपये का भुगतान प्राप्त हुआ है'),
+        audioBlob: createRealisticAudioBlob('आपको पैंतीस रुपये का भुगतान प्राप्त हुआ है', 3000),
         expectedAmount: 35,
         expectedTranscription: 'आपको ₹35 का भुगतान प्राप्त हुआ है',
         suggestedProducts: ['Wheat Flour (1kg)'],

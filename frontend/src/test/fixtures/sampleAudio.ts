@@ -176,5 +176,6 @@ export const integrationTestScenarios = [
   }
 ];
 
-// Re-export vi for convenience in test files
-export { vi } from 'vitest';
+// Note: vi is only available in test environment
+// Re-export vi for convenience in test files (only when vitest is available)
+export const vi = typeof window !== 'undefined' && (window as any).vi ? (window as any).vi : undefined;

@@ -73,7 +73,7 @@ export default defineConfig(({ mode }) => ({
       'dexie'
     ],
     exclude: [
-      // Exclude large dependencies that should be loaded on demand
+      'vitest' // Exclude vitest from optimization to prevent it from being loaded in dev
     ]
   },
   
@@ -81,5 +81,19 @@ export default defineConfig(({ mode }) => ({
   esbuild: {
     // Drop console and debugger in production
     drop: mode === 'production' ? ['console', 'debugger'] : []
+  },
+
+  // Test configuration
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    globals: true,
+    // Exclude test files from dev server
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/.{idea,git,cache,output,temp}/**',
+      '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*'
+    ]
   }
 }))
