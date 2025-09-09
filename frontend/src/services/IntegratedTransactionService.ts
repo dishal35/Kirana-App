@@ -1,6 +1,6 @@
 import { audioCaptureService, type AudioCaptureService, type AudioQualityMetrics } from './AudioCapture';
 import { TransactionProcessor } from './TransactionProcessor';
-import { ProductSuggestionService } from './ProductSuggestionService';
+import { productSuggestionService } from './ProductSuggestionService';
 import type { Product, TransactionResult } from '../types';
 
 export interface TransactionServiceConfig {
@@ -14,7 +14,6 @@ export interface TransactionServiceConfig {
 export class IntegratedTransactionService {
   private audioCapture: AudioCaptureService;
   private transactionProcessor: TransactionProcessor;
-  private productSuggestionService: ProductSuggestionService;
   private config: TransactionServiceConfig;
   private isActive = false;
   private status: 'idle' | 'listening' | 'processing' | 'error' = 'idle';
@@ -25,7 +24,8 @@ export class IntegratedTransactionService {
     // Initialize services
     this.audioCapture = audioCaptureService;
     this.transactionProcessor = new TransactionProcessor();
-    this.productSuggestionService = new ProductSuggestionService();
+    // Use singleton instance with exact matching
+    console.log('🎯 IntegratedTransactionService using exact matching ProductSuggestionService');
 
     // Set up event handlers
     this.setupEventHandlers();
@@ -46,11 +46,78 @@ export class IntegratedTransactionService {
       console.warn('Audio quality issue:', issue, metrics);
       // Don't set error status for quality issues, just log them
     };
+
+    // Handle simulated transaction events for testing
+    this.handleSimulatedTransactionEvent = this.handleSimulatedTransactionEvent.bind(this);
+    window.addEventListener('upi-transaction-detected', this.handleSimulatedTransactionEvent);
   }
 
   private setStatus(status: 'idle' | 'listening' | 'processing' | 'error') {
     this.status = status;
     this.config.onStatusChange(status);
+  }
+
+  private async handleSimulatedTransactionEvent(event: CustomEvent) {
+    console.log('🧪 IntegratedTransactionService handling simulated transaction event:', event.detail);
+    try {
+      this.setStatus('processing');
+
+      // Create transaction result from simulated event
+      const transactionResult: TransactionResult = {
+        amount: event.detail.amount,
+        transcription: event.detail.transcription,
+        confidence: event.detail.confidence || 0.95,
+        timestamp: event.detail.timestamp || new Date(),
+        type: event.detail.type || 'upi',
+        suggestedProducts: [],
+        suggestedProductsWithQuantities: []
+      };
+
+      if (transactionResult.amount > 0) {
+        // Get exact product suggestions if enabled
+        if (this.config.autoSuggestEnabled) {
+          const suggestions = await productSuggestionService.getSuggestions(
+            transactionResult.amount,
+            3 // Max suggestions
+          );
+          
+          if (suggestions.length > 0) {
+            // Keep both formats for backward compatibility and exact matching
+            transactionResult.suggestedProducts = suggestions.map(s => s.product);
+            transactionResult.suggestedProductsWithQuantities = suggestions.map(s => ({
+              product: s.product,
+              quantity: s.suggestedQuantity,
+              reason: s.reason,
+              confidence: s.confidence
+            }));
+            console.log(`🎯 Found ${suggestions.length} exact product matches for simulated ₹${transactionResult.amount}`);
+            console.log('   Exact combinations:', suggestions.map(s => `${s.suggestedQuantity}x ${s.product.name} = ₹${s.product.price * s.suggestedQuantity}`).join(', '));
+          } else {
+            // No exact combinations found
+            transactionResult.suggestedProducts = [];
+            transactionResult.suggestedProductsWithQuantities = [];
+            console.log(`⚠️ No exact combinations found for simulated ₹${transactionResult.amount}`);
+          }
+        }
+
+        // Notify the application about the detected transaction
+        console.log('🚀 IntegratedTransactionService sending simulated transaction to App:', transactionResult);
+        console.log('   - suggestedProducts:', transactionResult.suggestedProducts?.length || 0);
+        console.log('   - suggestedProductsWithQuantities:', transactionResult.suggestedProductsWithQuantities?.length || 0);
+        if (transactionResult.suggestedProductsWithQuantities?.length > 0) {
+          console.log('   - Exact combinations:', transactionResult.suggestedProductsWithQuantities.map(s => `${s.quantity}x ${s.product.name}`));
+        }
+        this.config.onTransactionDetected(transactionResult);
+      }
+
+      this.setStatus('listening'); // Return to listening state
+    } catch (error) {
+      console.error('Error processing simulated transaction:', error);
+      this.setStatus('error');
+      this.config.onError(
+        error instanceof Error ? error.message : 'Failed to process simulated transaction'
+      );
+    }
   }
 
   private async processAudioTransaction(audioBlob: Blob) {
@@ -61,18 +128,39 @@ export class IntegratedTransactionService {
       const transactionResult = await this.transactionProcessor.processAudio(audioBlob);
 
       if (transactionResult.amount > 0) {
-        // Get product suggestions if enabled
+        // Get exact product suggestions if enabled
         if (this.config.autoSuggestEnabled) {
-          const suggestions = await this.productSuggestionService.getSuggestions(
+          const suggestions = await productSuggestionService.getSuggestions(
             transactionResult.amount,
             3 // Max suggestions
           );
           
-          // Convert ProductSuggestion[] to Product[]
-          transactionResult.suggestedProducts = suggestions.map(s => s.product);
+          if (suggestions.length > 0) {
+            // Keep both formats for backward compatibility and exact matching
+            transactionResult.suggestedProducts = suggestions.map(s => s.product);
+            transactionResult.suggestedProductsWithQuantities = suggestions.map(s => ({
+              product: s.product,
+              quantity: s.suggestedQuantity,
+              reason: s.reason,
+              confidence: s.confidence
+            }));
+            console.log(`🎯 Found ${suggestions.length} exact product matches for ₹${transactionResult.amount}`);
+            console.log('   Exact combinations:', suggestions.map(s => `${s.suggestedQuantity}x ${s.product.name} = ₹${s.product.price * s.suggestedQuantity}`).join(', '));
+          } else {
+            // No exact combinations found
+            transactionResult.suggestedProducts = [];
+            transactionResult.suggestedProductsWithQuantities = [];
+            console.log(`⚠️ No exact combinations found for ₹${transactionResult.amount}`);
+          }
         }
 
         // Notify the application about the detected transaction
+        console.log('🚀 IntegratedTransactionService sending to App:', transactionResult);
+        console.log('   - suggestedProducts:', transactionResult.suggestedProducts?.length || 0);
+        console.log('   - suggestedProductsWithQuantities:', transactionResult.suggestedProductsWithQuantities?.length || 0);
+        if (transactionResult.suggestedProductsWithQuantities?.length > 0) {
+          console.log('   - Exact combinations:', transactionResult.suggestedProductsWithQuantities.map(s => `${s.quantity}x ${s.product.name}`));
+        }
         this.config.onTransactionDetected(transactionResult);
       }
 
@@ -150,6 +238,8 @@ export class IntegratedTransactionService {
   // Cleanup method
   destroy(): void {
     this.stopListening();
+    // Remove event listener for simulated transactions
+    window.removeEventListener('upi-transaction-detected', this.handleSimulatedTransactionEvent);
     // The audio service is a singleton, so we don't destroy it
     // Just clear any stored audio if needed
     this.audioCapture.clearStoredAudio();

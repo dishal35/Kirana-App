@@ -48,6 +48,12 @@ export interface TransactionResult {
   amount: number;
   confidence: number;
   suggestedProducts: Product[];
+  suggestedProductsWithQuantities?: Array<{
+    product: Product;
+    quantity: number;
+    reason: string;
+    confidence: number;
+  }>;
   transcription: string;
 }
 

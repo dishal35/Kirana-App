@@ -26,9 +26,10 @@ export const LazyOnboardingWizard = lazy(() =>
   import('./onboarding/OnboardingWizard').then(module => ({ default: module.OnboardingWizard }))
 );
 
-export const LazyTransactionConfirmationModal = lazy(() => 
-  import('./transaction/TransactionConfirmationModal').then(module => ({ default: module.TransactionConfirmationModal }))
-);
+// Temporary direct import to fix loading issue
+import { TransactionConfirmationModal as DirectTransactionConfirmationModal } from './transaction/TransactionConfirmationModal';
+
+export const LazyTransactionConfirmationModal = DirectTransactionConfirmationModal;
 
 export const LazyDemoPage = lazy(() => 
   import('./demo/DemoPage').then(module => ({ default: module.default }))
@@ -89,20 +90,27 @@ export const TransactionConfirmationModal: React.FC<TransactionConfirmationModal
     onConfirm(selections);
   };
 
+  // Debug logging
+  console.log('🎨 LazyComponents rendering modal with props:');
+  console.log('   - isOpen:', isOpen);
+  console.log('   - amount:', transactionResult?.amount || 0);
+  console.log('   - suggestedProducts:', (transactionResult?.suggestedProducts || []).length);
+  console.log('   - suggestedProductsWithQuantities:', (transactionResult?.suggestedProductsWithQuantities || []).length);
+  if (transactionResult?.suggestedProductsWithQuantities?.length > 0) {
+    console.log('   - Exact match data:', transactionResult.suggestedProductsWithQuantities);
+  }
+  
   return (
-    <Suspense fallback={<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <PageLoader text="Loading transaction..." />
-    </div>}>
-      <LazyTransactionConfirmationModal 
-        isOpen={isOpen}
-        onClose={onCancel}
-        amount={transactionResult?.amount || 0}
-        suggestedProducts={transactionResult?.suggestedProducts || []}
-        transcription={transactionResult?.transcription}
-        confidence={transactionResult?.confidence}
-        onTransactionConfirmed={handleTransactionConfirmed}
-      />
-    </Suspense>
+    <LazyTransactionConfirmationModal 
+      isOpen={isOpen}
+      onClose={onCancel}
+      amount={transactionResult?.amount || 0}
+      suggestedProducts={transactionResult?.suggestedProducts || []}
+      suggestedProductsWithQuantities={transactionResult?.suggestedProductsWithQuantities || []}
+      transcription={transactionResult?.transcription}
+      confidence={transactionResult?.confidence}
+      onTransactionConfirmed={handleTransactionConfirmed}
+    />
   );
 };
 

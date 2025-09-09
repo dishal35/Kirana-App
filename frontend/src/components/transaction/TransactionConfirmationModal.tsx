@@ -10,6 +10,12 @@ export interface TransactionConfirmationModalProps {
   onClose: () => void;
   amount: number;
   suggestedProducts: Product[];
+  suggestedProductsWithQuantities?: Array<{
+    product: Product;
+    quantity: number;
+    reason: string;
+    confidence: number;
+  }>;
   transcription?: string;
   confidence?: number;
   onTransactionConfirmed: (transaction: Transaction) => void;
@@ -25,6 +31,7 @@ export const TransactionConfirmationModal: React.FC<TransactionConfirmationModal
   onClose,
   amount,
   suggestedProducts,
+  suggestedProductsWithQuantities = [],
   transcription,
   confidence,
   onTransactionConfirmed
@@ -48,8 +55,16 @@ export const TransactionConfirmationModal: React.FC<TransactionConfirmationModal
 
     if (isOpen) {
       loadProducts();
-      // Auto-select first suggested product if available
-      if (suggestedProducts.length > 0) {
+      // Auto-select exact match products with correct quantities
+      if (suggestedProductsWithQuantities.length > 0) {
+        console.log('🎯 Auto-selecting exact match products:', suggestedProductsWithQuantities);
+        const exactSelections = suggestedProductsWithQuantities.map(suggestion => ({
+          product: suggestion.product,
+          quantity: Math.min(suggestion.quantity, suggestion.product.stock)
+        }));
+        setSelectedProducts(exactSelections);
+      } else if (suggestedProducts.length > 0) {
+        // Fallback to old logic for backward compatibility
         const firstSuggestion = suggestedProducts[0];
         const suggestedQuantity = Math.max(1, Math.floor((amount || 0) / firstSuggestion.price));
         setSelectedProducts([{
@@ -58,7 +73,7 @@ export const TransactionConfirmationModal: React.FC<TransactionConfirmationModal
         }]);
       }
     }
-  }, [isOpen, suggestedProducts, amount]);
+  }, [isOpen, suggestedProducts, suggestedProductsWithQuantities, amount]);
 
   // Reset state when modal closes
   useEffect(() => {
@@ -177,12 +192,21 @@ export const TransactionConfirmationModal: React.FC<TransactionConfirmationModal
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-green-600 text-white p-4 flex justify-between items-center">
+        <div className={`${suggestedProductsWithQuantities.length > 0 ? 'bg-green-600' : 'bg-blue-600'} text-white p-4 flex justify-between items-center`}>
           <div>
-            <h2 className="text-xl font-bold">Transaction Received</h2>
-            <p className="text-green-100">₹{(amount || 0).toFixed(2)} received via {transactionType.toUpperCase()}</p>
+            <h2 className="text-xl font-bold">
+              {suggestedProductsWithQuantities.length > 0 ? 'Exact Matches Found!' : 'Transaction Received'}
+            </h2>
+            <p className={`${suggestedProductsWithQuantities.length > 0 ? 'text-green-100' : 'text-blue-100'}`}>
+              ₹{(amount || 0).toFixed(2)} received via {transactionType.toUpperCase()}
+              {suggestedProductsWithQuantities.length > 0 && (
+                <span className="ml-2 bg-green-500 bg-opacity-30 px-2 py-1 rounded text-xs">
+                  {suggestedProductsWithQuantities.length} exact combination{suggestedProductsWithQuantities.length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </p>
             {transcription && (
-              <p className="text-green-200 text-sm mt-1">"{transcription}"</p>
+              <p className={`${suggestedProducts.length > 0 ? 'text-green-200' : 'text-blue-200'} text-sm mt-1`}>"{transcription}"</p>
             )}
           </div>
           <button
@@ -233,6 +257,31 @@ export const TransactionConfirmationModal: React.FC<TransactionConfirmationModal
                 {showAllProducts ? 'Show Suggestions' : 'Show All Products'}
               </button>
             </div>
+
+            {/* No exact combinations message */}
+            {!showAllProducts && suggestedProductsWithQuantities.length === 0 && suggestedProducts.length === 0 && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="text-yellow-600">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-yellow-800">No Exact Combinations Found</h4>
+                    <p className="text-yellow-700 text-sm mt-1">
+                      No product combinations match exactly ₹{(amount || 0).toFixed(2)}. 
+                      <button 
+                        onClick={() => setShowAllProducts(true)}
+                        className="underline font-medium hover:text-yellow-800"
+                      >
+                        Browse all products
+                      </button> to create a manual transaction.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <ProductCatalogGrid
               products={displayProducts}

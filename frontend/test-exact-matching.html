@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Exact Matching</title>
+</head>
+<body>
+    <h1>Test Exact Matching with Simulated Transactions</h1>
+    
+    <p>This page is for testing the exact matching functionality. Follow these steps:</p>
+    
+    <ol>
+        <li>Open your main app at <a href="http://localhost:5173" target="_blank">http://localhost:5173</a></li>
+        <li>Open Developer Console (F12)</li>
+        <li>Run the following commands to test exact matching:</li>
+    </ol>
+    
+    <h2>Test Commands</h2>
+    <pre><code>
+// 1. First, verify the app is set up
+window.testUtils.verifySetup()
+
+// 2. Test exact matches for known product combinations
+// Test single product exact match (if you have a ₹45 product)
+window.testUtils.simulateTransaction(45)
+
+// Test multiple quantity exact match (if you have products that sum to ₹90)  
+window.testUtils.simulateTransaction(90)
+
+// Test combination match (e.g., ₹165 = ₹45 rice + ₹120 tea)
+window.testUtils.simulateTransaction(165)
+
+// Test no exact match case
+window.testUtils.simulateTransaction(99)
+    </code></pre>
+    
+    <h2>What to Look For</h2>
+    <ul>
+        <li><strong>Console Logs:</strong> Look for "🎯 Found X exact product matches" or "⚠️ No exact combinations found"</li>
+        <li><strong>Transaction Modal:</strong> Should show exact product suggestions with correct quantities</li>
+        <li><strong>Modal Header:</strong> Should indicate "Exact matches found" or "No exact combinations found"</li>
+        <li><strong>Product Selection:</strong> Auto-selected products should have the right quantities set</li>
+    </ul>
+    
+    <h2>Expected Behavior</h2>
+    <p><strong>Before the fix:</strong> Simulated transactions showed old/approximate suggestions</p>
+    <p><strong>After the fix:</strong> Simulated transactions should now show exact matches just like real audio transactions</p>
+    
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px;
+        }
+        pre { 
+            background: #f5f5f5; 
+            padding: 15px; 
+            border-radius: 5px; 
+            overflow-x: auto;
+        }
+        code {
+            background: #f5f5f5;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</body>
+</html>
